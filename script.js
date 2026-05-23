@@ -9,24 +9,27 @@ const dataPelengkap = {
 };
 
 // ==========================================
-// VARIABEL GLOBAL UNTUK PAGINATION
+// VARIABEL GLOBAL 
 // ==========================================
 let globalRoomData = []; 
 let currentPage = 1;     
-const itemsPerPage = 2;  
+const itemsPerPage = 4;
+let hargaKamarGlobal = 0; // Variabel penting untuk kalkulator harga
 
-const formatRupiah = (angka) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-};
+const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
 // FUNGSI CERDAS: Mengambil nama dasar kamar untuk mencocokkan gambar
 function getBaseRoomName(namaTipe) {
-    if (namaTipe.startsWith('Standard')) return 'Standard';
-    if (namaTipe.startsWith('Deluxe')) return 'Deluxe';
-    if (namaTipe.startsWith('Family')) return 'Family Room';
-    if (namaTipe.startsWith('Suite') || namaTipe.includes('Suite')) return 'Suite';
-    if (namaTipe.includes('Junior') || namaTipe.includes('Presidential') || namaTipe.includes('Honeymoon')) return 'Suite';
-    return 'Standard';
+    if (namaTipe.includes('Presidential')) return 'Presidential';
+    if (namaTipe.includes('Suite Room')) return 'Suite';
+    if (namaTipe.includes('Junior')) return 'Junior Suite';
+    if (namaTipe.includes('Connecting')) return 'Connecting';
+    if (namaTipe.includes('Family')) return 'Family';
+    if (namaTipe.includes('Deluxe City')) return 'Deluxe City';
+    if (namaTipe.includes('Deluxe')) return 'Deluxe';
+    if (namaTipe.includes('Superior')) return 'Superior';
+    if (namaTipe.includes('Standard')) return 'Standard';
+    return 'Standard'; // Default fallback
 }
 
 // ==========================================
@@ -34,19 +37,45 @@ function getBaseRoomName(namaTipe) {
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     const currentPath = window.location.pathname;
-    
-    if (currentPath.includes('detail.html')) { loadDetailKamar(); } 
+    if (currentPath.includes('detail.html')) { loadDetailKamar(); }
     else if (currentPath.includes('kamar.html')) { loadDataKamarGrid(); }
     else if (currentPath.includes('cek-pesanan.html')) { initCekPesanan(); }
-    else {
-        loadDataBeranda(); 
-        initBookingWidget(); 
-        initSearchEngine();  
-    }
+    else { loadDataBeranda(); initSearchEngine(); }
 });
 
 // ==========================================
-// FUNGSI BANTUAN: MERENDER KARTU KAMAR
+// FUNGSI 1 & 2: BERANDA & PENCARIAN
+// ==========================================
+function loadDataBeranda() {
+    fetch('http://127.0.0.1:5000/api/tipe-kamar')
+        .then(response => response.json())
+        .then(data => { globalRoomData = data; currentPage = 1; renderKamarCards(); })
+        .catch(error => document.getElementById('kamar-container').innerHTML = '<h3 style="color:red; text-align:center;">Gagal terhubung ke Database.</h3>');
+}
+
+function initSearchEngine() {
+    const searchForm = document.querySelector('.search-engine-container');
+    if (!searchForm) return;
+
+    searchForm.addEventListener('submit', function(event) {
+        event.preventDefault(); 
+        const checkin = document.getElementById('checkin').value;
+        const checkout = document.getElementById('checkout').value;
+        const kapasitas = document.getElementById('kapasitas').value;
+
+        if (!checkin || !checkout) return alert('Silakan pilih tanggal Check-In dan Check-Out terlebih dahulu.');
+        if (new Date(checkout) <= new Date(checkin)) return alert('Kesalahan: Tanggal Check-Out harus setelah tanggal Check-In!');
+
+        document.getElementById('kamar-container').innerHTML = '<p style="text-align: center; padding: 50px;">Mencari kamar yang tersedia...</p>';
+        fetch(`http://127.0.0.1:5000/api/cari-kamar?checkin=${checkin}&checkout=${checkout}&kapasitas=${kapasitas}`)
+            .then(response => response.json())
+            .then(data => { globalRoomData = data; currentPage = 1; renderKamarCards(); })
+            .catch(error => document.getElementById('kamar-container').innerHTML = '<h3 style="color:red; text-align:center;">Terjadi kesalahan sistem.</h3>');
+    });
+}
+
+// ==========================================
+// FUNGSI BANTUAN: MERENDER KARTU KAMAR (PAGINATION)
 // ==========================================
 function renderKamarCards() {
     const kamarContainer = document.getElementById('kamar-container');
@@ -68,19 +97,10 @@ function renderKamarCards() {
         
         let fasilitasSingkat = `Luas ${kamar.kapasitas * 15} sqm<br>AC & TV LED 40"<br>Wi-Fi Gratis<br>Pembuat Kopi & Teh`;
         
-        // Membaca kata kunci dari format penamaan OTA yang realistis
-        if(kamar.nama_tipe.includes('Breakfast')) {
-            fasilitasSingkat += `<br><span style="color: #154230; font-weight: bold; display: block; margin-top: 5px;">🍳 Termasuk Sarapan Pagi</span>`;
-        }
-        if(kamar.nama_tipe.includes('Free Cancellation')) {
-            fasilitasSingkat += `<br><span style="color: #0D47A1; font-weight: bold; display: block; margin-top: 5px;">🛡️ Pembatalan Gratis (Fleksibel)</span>`;
-        }
-        if(kamar.nama_tipe.includes('Jacuzzi')) {
-            fasilitasSingkat += `<br><span style="color: #D81B60; font-weight: bold; display: block; margin-top: 5px;">🛁 Private Jacuzzi Dalam Kamar</span>`;
-        }
-        if(kamar.nama_tipe.includes('Extra Bed')) {
-            fasilitasSingkat += `<br><span style="color: #E65100; font-weight: bold; display: block; margin-top: 5px;">🛏️ Termasuk 1 Kasur Tambahan</span>`;
-        }
+        if(kamar.nama_tipe.includes('Breakfast')) fasilitasSingkat += `<br><span style="color: #154230; font-weight: bold; display: block; margin-top: 5px;">🍳 Termasuk Sarapan Pagi</span>`;
+        if(kamar.nama_tipe.includes('Free Cancellation')) fasilitasSingkat += `<br><span style="color: #0D47A1; font-weight: bold; display: block; margin-top: 5px;">🛡️ Pembatalan Gratis (Fleksibel)</span>`;
+        if(kamar.nama_tipe.includes('Jacuzzi')) fasilitasSingkat += `<br><span style="color: #D81B60; font-weight: bold; display: block; margin-top: 5px;">🛁 Private Jacuzzi Dalam Kamar</span>`;
+        if(kamar.nama_tipe.includes('Extra Bed')) fasilitasSingkat += `<br><span style="color: #E65100; font-weight: bold; display: block; margin-top: 5px;">🛏️ Termasuk 1 Kasur Tambahan</span>`;
 
         const cardHTML = `
             <div class="horizontal-card">
@@ -135,119 +155,172 @@ window.changePage = function(page) {
 }
 
 // ==========================================
-// FUNGSI 1 & 2: BERANDA & PENCARIAN
-// ==========================================
-function loadDataBeranda() {
-    fetch('http://127.0.0.1:5000/api/tipe-kamar')
-        .then(response => response.json())
-        .then(data => { globalRoomData = data; currentPage = 1; renderKamarCards(); })
-        .catch(error => document.getElementById('kamar-container').innerHTML = '<h3 style="color:red; text-align:center;">Gagal terhubung ke Database.</h3>');
-}
-
-function initSearchEngine() {
-    const searchForm = document.querySelector('.search-engine-container');
-    if (!searchForm) return;
-
-    searchForm.addEventListener('submit', function(event) {
-        event.preventDefault(); 
-        const checkin = document.getElementById('checkin').value;
-        const checkout = document.getElementById('checkout').value;
-        const kapasitas = document.getElementById('kapasitas').value;
-
-        if (!checkin || !checkout) return alert('Silakan pilih tanggal Check-In dan Check-Out terlebih dahulu.');
-        if (new Date(checkout) <= new Date(checkin)) return alert('Kesalahan: Tanggal Check-Out harus setelah tanggal Check-In!');
-
-        document.getElementById('kamar-container').innerHTML = '<p style="text-align: center; padding: 50px;">Mencari kamar yang tersedia...</p>';
-        fetch(`http://127.0.0.1:5000/api/cari-kamar?checkin=${checkin}&checkout=${checkout}&kapasitas=${kapasitas}`)
-            .then(response => response.json())
-            .then(data => { globalRoomData = data; currentPage = 1; renderKamarCards(); })
-            .catch(error => document.getElementById('kamar-container').innerHTML = '<h3 style="color:red; text-align:center;">Terjadi kesalahan sistem.</h3>');
-    });
-}
-
-function initBookingWidget() {
-    const checkinInput = document.getElementById('checkin');
-    const checkoutInput = document.getElementById('checkout');
-    const summaryIn = document.getElementById('summary-in');
-    const summaryOut = document.getElementById('summary-out');
-    const formatDate = (dateString) => { if (!dateString) return '-'; return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
-
-    if (checkinInput && summaryIn) {
-        checkinInput.addEventListener('change', function() {
-            summaryIn.textContent = formatDate(this.value);
-            if (checkoutInput) { let nextDay = new Date(this.value); nextDay.setDate(nextDay.getDate() + 1); checkoutInput.min = nextDay.toISOString().split("T")[0]; }
-        });
-    }
-    if (checkoutInput && summaryOut) checkoutInput.addEventListener('change', function() { summaryOut.textContent = formatDate(this.value); });
-}
-
-// ==========================================
-// FUNGSI 4: HALAMAN DETAIL & PEMESANAN
+// FUNGSI HALAMAN DETAIL & PEMESANAN (SUDAH DIGABUNG & DIRAPIKAN)
 // ==========================================
 function loadDetailKamar() {
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('id');
-    if (!roomId) return document.querySelector('.detail-content').innerHTML = '<h2>Kamar tidak ditemukan!</h2>';
+    
+    if (!roomId) {
+        document.querySelector('.detail-content').innerHTML = '<h2>Kamar tidak ditemukan!</h2>';
+        return;
+    }
 
-    fetch('http://127.0.0.1:5000/api/tipe-kamar').then(res => res.json()).then(data => {
-        const kamar = data.find(k => k.id_tipe == roomId);
-        if (kamar) {
-            const baseName = getBaseRoomName(kamar.nama_tipe);
-            const infoTambahan = dataPelengkap[baseName] || { img: '', desc: '-' };
+    fetch('http://127.0.0.1:5000/api/tipe-kamar')
+        .then(res => {
+            if (!res.ok) throw new Error("Gagal mengambil data dari server");
+            return res.json();
+        })
+        .then(data => {
+            const kamar = data.find(k => k.id_tipe == roomId);
             
-            document.getElementById('detail-nama').textContent = kamar.nama_tipe;
-            document.getElementById('detail-img').src = infoTambahan.img;
-            document.getElementById('detail-kapasitas').textContent = `${kamar.kapasitas} Guest Maximum`;
-            document.getElementById('detail-deskripsi').textContent = infoTambahan.desc;
-            document.getElementById('detail-harga').textContent = formatRupiah(kamar.harga_per_malam) + ' / Malam';
-            
-            const formBooking = document.getElementById('form-booking');
-            if (formBooking) {
-                formBooking.addEventListener('submit', function(e) {
-                    e.preventDefault(); 
-                    const btnSubmit = formBooking.querySelector('button');
-                    btnSubmit.textContent = 'MEMPROSES...'; btnSubmit.disabled = true;
+            if (kamar) {
+                // 1. SIMPAN HARGA KE VARIABEL GLOBAL (Ini kunci agar total tidak 0)
+                hargaKamarGlobal = kamar.harga_per_malam; 
+                
+                // 2. SET TAMPILAN GAMBAR & TEKS
+                const baseName = getBaseRoomName(kamar.nama_tipe);
+                const infoTambahan = dataPelengkap[baseName] || { img: '', desc: '-' };
+                
+                document.getElementById('detail-nama').textContent = kamar.nama_tipe;
+                document.getElementById('detail-img').src = infoTambahan.img;
+                document.getElementById('detail-kapasitas').textContent = `${kamar.kapasitas} Guest Maximum`;
+                document.getElementById('detail-deskripsi').textContent = infoTambahan.desc;
+                document.getElementById('detail-harga').textContent = formatRupiah(kamar.harga_per_malam) + ' / Malam';
 
-                    const checkin = document.getElementById('book-in').value;
-                    const checkout = document.getElementById('book-out').value;
-                    const date1 = new Date(checkin); const date2 = new Date(checkout);
-                    
-                    if (date2 <= date1) { alert("Kesalahan: Tanggal Check-Out harus setelah Check-In!"); btnSubmit.textContent = 'KONFIRMASI PESANAN'; btnSubmit.disabled = false; return; }
-                    
-                    const diffDays = Math.ceil(Math.abs(date2 - date1) / (1000 * 60 * 60 * 24));
-                    const totalHarga = diffDays * kamar.harga_per_malam;
+                // 3. PANGGIL KALKULATOR
+                hitungTotal(); 
 
-                    const payload = {
-                        id_tipe: kamar.id_tipe, nama: document.getElementById('book-nama').value,
-                        email: document.getElementById('book-email').value, telepon: document.getElementById('book-tlp').value,
-                        checkin: checkin, checkout: checkout, total_harga: totalHarga
-                    };
+                // 4. PROSES SUBMIT FORM
+                const formBooking = document.getElementById('form-booking');
+                if (formBooking) {
+                    formBooking.addEventListener('submit', async function(e) {
+                        e.preventDefault(); 
+                        const btnSubmit = formBooking.querySelector('button');
+                        btnSubmit.textContent = 'MEMPROSES...'; btnSubmit.disabled = true;
+                        
+                        const checkin = document.getElementById('book-in').value;
+                        const checkout = document.getElementById('book-out').value;
+                        const totalHarga = document.getElementById('total-harga-value').value;
+                        
+                        // Validasi
+                        if (new Date(checkout) <= new Date(checkin)) {
+                            alert("Tanggal Check-Out harus setelah Check-In!");
+                            btnSubmit.textContent = 'KONFIRMASI PESANAN'; btnSubmit.disabled = false;
+                            return; 
+                        }
 
-                    fetch('http://127.0.0.1:5000/api/buat-pesanan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-                    .then(res => res.json())
-                    .then(data => {
-                        if(data.status === 'success') {
-                            const detailContainer = document.querySelector('.detail-container');
-                            if (detailContainer) {
-                                detailContainer.innerHTML = `
-                                    <div style="grid-column: span 2; text-align: center; background: white; padding: 50px; border-radius: 8px; border: 1px solid #A6824A;">
-                                        <h2 style="color: #154230; margin-bottom: 20px;">🎉 PESANAN BERHASIL DIBUAT!</h2>
-                                        <div style="background: #E6E2DA; padding: 20px; display: inline-block; border-radius: 4px; margin-bottom: 30px;"><span style="font-size: 0.85rem; color: #666; display: block; text-transform: uppercase;">ID Reservasi Anda</span><strong style="font-size: 2.2rem; color: #5D1E21;">${data.id_reservasi}</strong></div>
-                                        <br><a href="cek-pesanan.html" class="btn-book-now" style="text-decoration: none; padding: 12px 30px; display: inline-block;">PERGI KE CEK PESANAN ❯</a>
-                                    </div>`;
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                        if (totalHarga == 0 || totalHarga === "") {
+                            alert("Total harga tidak valid. Periksa kembali tanggal Anda.");
+                            btnSubmit.textContent = 'KONFIRMASI PESANAN'; btnSubmit.disabled = false;
+                            return; 
+                        }
+
+                        const payload = {
+                            id_tipe: kamar.id_tipe,
+                            nama: document.getElementById('book-nama').value,
+                            email: document.getElementById('book-email').value,
+                            telepon: document.getElementById('book-tlp').value,
+                            checkin: checkin,
+                            checkout: checkout,
+                            total_harga: totalHarga 
+                        };
+
+                        try {
+                            const res = await fetch('http://127.0.0.1:5000/api/buat-pesanan', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            const result = await res.json();
+                            
+                            if (result.status === 'success') {
+                                // Tampilan Berhasil yang Keren
+                                const detailContainer = document.querySelector('.detail-container');
+                                if (detailContainer) {
+                                    detailContainer.innerHTML = `
+                                        <div style="grid-column: span 2; text-align: center; background: white; padding: 50px; border-radius: 8px; border: 1px solid #A6824A;">
+                                            <h2 style="color: #154230; margin-bottom: 20px;">🎉 PESANAN BERHASIL DIBUAT!</h2>
+                                            <div style="background: #E6E2DA; padding: 20px; display: inline-block; border-radius: 4px; margin-bottom: 30px;"><span style="font-size: 0.85rem; color: #666; display: block; text-transform: uppercase;">ID Reservasi Anda</span><strong style="font-size: 2.2rem; color: #5D1E21;">${result.id_reservasi}</strong></div>
+                                            <br><a href="cek-pesanan.html" class="btn-book-now" style="text-decoration: none; padding: 12px 30px; display: inline-block;">PERGI KE CEK PESANAN ❯</a>
+                                        </div>`;
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }
+                            } else {
+                                alert("Pemesanan Gagal: " + result.message);
+                                btnSubmit.textContent = 'KONFIRMASI PESANAN'; btnSubmit.disabled = false;
                             }
-                        } else { alert(data.message); btnSubmit.textContent = 'KONFIRMASI PESANAN'; btnSubmit.disabled = false; }
-                    })
-                    .catch(err => { alert("Terjadi kesalahan sistem."); btnSubmit.textContent = 'KONFIRMASI PESANAN'; btnSubmit.disabled = false; });
-                });
+                        } catch (err) {
+                            console.error("Terjadi masalah jaringan:", err);
+                            alert("Gagal terhubung ke server. Pastikan Flask menyala.");
+                            btnSubmit.textContent = 'KONFIRMASI PESANAN'; btnSubmit.disabled = false;
+                        }
+                    });
+                }
+            } else {
+                document.querySelector('.detail-content').innerHTML = '<h2>Kamar tidak ditemukan di database.</h2>';
             }
-        }
-    });
+        })
+        .catch(error => {
+            console.error("Koneksi terputus:", error);
+            alert("Gagal memuat data. Pastikan server Flask sudah berjalan.");
+        });
 }
 
 // ==========================================
-// FUNGSI 5: HALAMAN KAMAR GRID
+// FUNGSI KALKULATOR TOTAL HARGA (HANYA ADA 1 SEKARANG!)
+// ==========================================
+function hitungTotal() {
+    const inputIn = document.getElementById('book-in');
+    const inputOut = document.getElementById('book-out');
+    const totalDisplay = document.getElementById('total-display');
+    const totalValue = document.getElementById('total-harga-value'); 
+
+    if (!inputIn || !inputOut || !totalDisplay) return;
+
+    const valIn = inputIn.value;
+    const valOut = inputOut.value;
+
+    if (valIn && valOut) {
+        const dateIn = new Date(valIn);
+        const dateOut = new Date(valOut);
+
+        if (dateOut > dateIn) {
+            const diffTime = Math.abs(dateOut - dateIn);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const total = diffDays * hargaKamarGlobal;
+            
+            totalDisplay.value = new Intl.NumberFormat('id-ID', { 
+                style: 'currency', currency: 'IDR', maximumFractionDigits: 0
+            }).format(total);
+            
+            if (totalValue) totalValue.value = total;
+        } else {
+            totalDisplay.value = "Tanggal Tidak Valid";
+            if (totalValue) totalValue.value = 0;
+        }
+    }
+}
+
+// ==========================================
+// EVENT LISTENER UNTUK KALKULATOR TANGGAL
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    const bookInEl = document.getElementById('book-in');
+    const bookOutEl = document.getElementById('book-out');
+
+    if (bookInEl && bookOutEl) {
+        bookInEl.addEventListener('input', hitungTotal);
+        bookInEl.addEventListener('change', hitungTotal);
+        bookOutEl.addEventListener('input', hitungTotal);
+        bookOutEl.addEventListener('change', hitungTotal);
+    }
+});
+
+// ==========================================
+// FUNGSI HALAMAN KAMAR GRID
 // ==========================================
 function loadDataKamarGrid() {
     fetch('http://127.0.0.1:5000/api/tipe-kamar').then(res => res.json()).then(data => {
@@ -270,16 +343,17 @@ function loadDataKamarGrid() {
                     </div>
                 </div>`;
         });
-    });
+    }).catch(err => console.log("Gagal muat grid kamar", err));
 }
 
 // ==========================================
-// FUNGSI 6: HALAMAN CEK PESANAN
+// FUNGSI HALAMAN CEK PESANAN
 // ==========================================
 function initCekPesanan() {
     const form = document.getElementById('form-cek-pesanan');
     const resultBox = document.getElementById('hasil-pesanan');
     if(!form) return;
+    
     form.addEventListener('submit', function(e) {
         e.preventDefault(); 
         const idInput = document.getElementById('input-id').value;
@@ -299,15 +373,22 @@ function initCekPesanan() {
                     document.getElementById('res-tlp').textContent = p.nomor_telepon;
                     document.getElementById('res-in').textContent = new Date(p.tanggal_masuk).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
                     document.getElementById('res-out').textContent = new Date(p.tanggal_keluar).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                    document.getElementById('res-harga').textContent = formatRupiah(p.total_harga);
+                    document.getElementById('res-harga').textContent = formatRupiah(p.harga_terkunci);
                     document.getElementById('res-kamar').textContent = p.nama_tipe;
 
                     const badge = document.getElementById('res-status');
                     badge.style.backgroundColor = p.status_pesanan === 'Dikonfirmasi' ? '#154230' : (p.status_pesanan === 'Batal' ? '#5D1E21' : '#A6824A'); 
                     badge.style.color = p.status_pesanan === 'Menunggu' ? '#101111' : 'white';
                     resultBox.style.display = 'block';
-                } else { alert(data.message); resultBox.style.display = 'none'; }
+                } else { 
+                    alert(data.message); 
+                    resultBox.style.display = 'none'; 
+                }
             })
-            .catch(err => { alert("Kesalahan server."); btnSubmit.textContent = "CARI PESANAN"; btnSubmit.disabled = false; });
+            .catch(err => { 
+                alert("Kesalahan server."); 
+                btnSubmit.textContent = "CARI PESANAN"; 
+                btnSubmit.disabled = false; 
+            });
     });
 }

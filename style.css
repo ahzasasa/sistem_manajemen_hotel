@@ -604,6 +604,7 @@ nav ul li a:hover {
     /* Memotong teks jadi 3 baris */
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

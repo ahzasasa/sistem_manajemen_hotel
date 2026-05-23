@@ -55,13 +55,19 @@
                     <label>Nomor Telepon / WhatsApp</label>
                     <input type="number" id="book-tlp" placeholder="0812xxxxxx" required>
                     
-                    <label>Tanggal Check-In</label>
-                    <input type="date" id="book-in" required>
+                    <label>Waktu Check-In</label>
+                    <input type="datetime-local" id="book-in" required>
                     
-                    <label>Tanggal Check-Out</label>
-                    <input type="date" id="book-out" required>
+                    <label>Waktu Check-Out</label>
+                    <input type="datetime-local" id="book-out" required>
+
+                    <label>Total Pembayaran:</label>
+                    <input type="text" id="total-display" readonly>
+                    <input type="hidden" id="total-harga-value">
                     
-                    <button type="submit" class="btn-book-now" style="width: 100%; margin-top: 25px; padding: 12px; font-size: 1rem;">KONFIRMASI PESANAN</button>
+                    <button type="submit" class="btn-book-now" style="width: 100%; margin-top: 25px; padding: 12px; font-size: 1rem;">
+                        KONFIRMASI PESANAN
+                    </button>
                 </form>
             </div>
         </div>
