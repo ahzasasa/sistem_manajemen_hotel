@@ -223,7 +223,8 @@ function loadDetailKamar() {
                             telepon: document.getElementById('book-tlp').value,
                             checkin: checkin,
                             checkout: checkout,
-                            total_harga: totalHarga 
+                            total_harga: totalHarga,
+                            metode_pembayaran: document.getElementById('metode-bayar').value
                         };
 
                         try {
@@ -347,7 +348,7 @@ function loadDataKamarGrid() {
 }
 
 // ==========================================
-// FUNGSI HALAMAN CEK PESANAN
+// FUNGSI HALAMAN CEK PESANAN (VERSI MENUJU E-VOUCHER)
 // ==========================================
 function initCekPesanan() {
     const form = document.getElementById('form-cek-pesanan');
@@ -361,28 +362,18 @@ function initCekPesanan() {
         const btnSubmit = form.querySelector('button');
 
         btnSubmit.textContent = "MENCARI..."; btnSubmit.disabled = true;
+        
         fetch(`http://127.0.0.1:5000/api/cek-pesanan?id=${idInput}&email=${emailInput}`)
             .then(res => res.json())
             .then(data => {
                 btnSubmit.textContent = "CARI PESANAN"; btnSubmit.disabled = false;
+                
                 if (data.status === 'success') {
-                    const p = data.data;
-                    document.getElementById('res-id').textContent = p.id_reservasi;
-                    document.getElementById('res-status').textContent = p.status_pesanan;
-                    document.getElementById('res-nama').textContent = p.nama_lengkap;
-                    document.getElementById('res-tlp').textContent = p.nomor_telepon;
-                    document.getElementById('res-in').textContent = new Date(p.tanggal_masuk).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                    document.getElementById('res-out').textContent = new Date(p.tanggal_keluar).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                    document.getElementById('res-harga').textContent = formatRupiah(p.harga_terkunci);
-                    document.getElementById('res-kamar').textContent = `${p.nama_tipe} (Kamar No. ${p.nomor_kamar})`;
-
-                    const badge = document.getElementById('res-status');
-                    badge.style.backgroundColor = p.status_pesanan === 'Dikonfirmasi' ? '#154230' : (p.status_pesanan === 'Batal' ? '#5D1E21' : '#A6824A'); 
-                    badge.style.color = p.status_pesanan === 'Menunggu' ? '#101111' : 'white';
-                    resultBox.style.display = 'block';
+                    // BARIS INI YANG MENGHUBUNGKAN KE VOUCHER BARU KITA!
+                    window.location.href = `voucher.html?id=${idInput}&email=${emailInput}`;
                 } else { 
                     alert(data.message); 
-                    resultBox.style.display = 'none'; 
+                    if (resultBox) resultBox.style.display = 'none'; 
                 }
             })
             .catch(err => { 

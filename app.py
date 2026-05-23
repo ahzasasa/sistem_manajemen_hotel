@@ -129,9 +129,10 @@ def cek_pesanan():
         
         if pesanan:
             if isinstance(pesanan['tanggal_masuk'], datetime):
-                pesanan['tanggal_masuk'] = pesanan['tanggal_masuk'].strftime('%Y-%m-%d')
+                pesanan['tanggal_masuk'] = pesanan['tanggal_masuk'].strftime('%Y-%m-%dT%H:%M:%S')
             if isinstance(pesanan['tanggal_keluar'], datetime):
-                pesanan['tanggal_keluar'] = pesanan['tanggal_keluar'].strftime('%Y-%m-%d')
+                pesanan['tanggal_keluar'] = pesanan['tanggal_keluar'].strftime('%Y-%m-%dT%H:%M:%S')
+                    
             return jsonify({"status": "success", "data": pesanan})
         else:
             return jsonify({"status": "not_found", "message": "Pesanan tidak ditemukan."}), 404
@@ -194,9 +195,9 @@ def buat_pesanan():
         
         # 5. Insert Reservasi
         cursor.execute("""
-            INSERT INTO reservasi (id_reservasi, id_tamu, tanggal_masuk, tanggal_keluar, status_pesanan) 
-            VALUES (%s, %s, %s, %s, 'Dikonfirmasi')
-        """, (id_reservasi, id_tamu, checkin_dt, checkout_dt))
+            INSERT INTO reservasi (id_reservasi, id_tamu, tanggal_masuk, tanggal_keluar, status_pesanan, metode_pembayaran) 
+            VALUES (%s, %s, %s, %s, 'Dikonfirmasi', %s)
+        """, (id_reservasi, id_tamu, checkin_dt, checkout_dt, data['metode_pembayaran']))
         
         # 6. Insert Detail & Update Status Kamar
         cursor.execute("INSERT INTO detail_reservasi (id_reservasi, id_kamar, harga_terkunci) VALUES (%s, %s, %s)",

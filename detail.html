@@ -65,7 +65,64 @@
                     <input type="text" id="total-display" readonly>
                     <input type="hidden" id="total-harga-value">
                     
-                    <button type="submit" class="btn-book-now" style="width: 100%; margin-top: 25px; padding: 12px; font-size: 1rem;">
+                    <label style="margin-top: 15px; display: block; font-weight: bold;">Metode Pembayaran:</label>
+                    <select id="metode-bayar" style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; background-color: white;">
+                        
+                        <optgroup label="1. Credit/Debit Card">
+                            <option value="Credit Card - Visa">Visa</option>
+                            <option value="Credit Card - Mastercard">Mastercard</option>
+                            <option value="Credit Card - AMEX">American Express (AMEX)</option>
+                            <option value="Credit Card - JCB">JCB</option>
+                            <option value="Credit Card - UnionPay">UnionPay</option>
+                        </optgroup>
+                        
+                        <optgroup label="2. Bank Transfer">
+                            <option value="Transfer - BCA">BCA</option>
+                            <option value="Transfer - Mandiri">Mandiri</option>
+                            <option value="Transfer - BNI">BNI</option>
+                            <option value="Transfer - BRI">BRI</option>
+                            <option value="Transfer - CIMB Niaga">CIMB Niaga</option>
+                            <option value="Transfer - Permata">Permata</option>
+                        </optgroup>
+                        
+                        <optgroup label="3. Virtual Account / E-Wallet">
+                            <option value="E-Wallet - GoPay">GoPay</option>
+                            <option value="E-Wallet - OVO">OVO</option>
+                            <option value="E-Wallet - DANA">DANA</option>
+                            <option value="E-Wallet - ShopeePay">ShopeePay</option>
+                            <option value="E-Wallet - LinkAja">LinkAja</option>
+                        </optgroup>
+                        
+                        <optgroup label="4. QR Payment">
+                            <option value="QR - QRIS">QRIS</option>
+                            <option value="QR - Alipay">Alipay QR</option>
+                            <option value="QR - WeChat Pay">WeChat Pay QR</option>
+                        </optgroup>
+                        
+                        <optgroup label="5. OTA Payment">
+                            <option value="OTA - Traveloka">Traveloka</option>
+                            <option value="OTA - Agoda">Agoda</option>
+                            <option value="OTA - Booking.com">Booking.com</option>
+                            <option value="OTA - Tiket.com">Tiket.com</option>
+                            <option value="OTA - Expedia">Expedia</option>
+                        </optgroup>
+                        
+                        <optgroup label="6. Pembayaran Langsung & Korporat">
+                            <option value="Cash">Cash (Tunai)</option>
+                            <option value="Pay at Hotel">Pay at Hotel (Bayar saat Check-in)</option>
+                            <option value="Corporate Billing">Corporate Billing</option>
+                        </optgroup>
+                        
+                        <optgroup label="7. Pay Later & Cicilan">
+                            <option value="PayLater - SPayLater">SPayLater</option>
+                            <option value="PayLater - Kredivo">Kredivo</option>
+                            <option value="PayLater - Akulaku">Akulaku</option>
+                            <option value="Cicilan Kartu Kredit">Kartu Kredit Cicilan</option>
+                        </optgroup>
+
+                    </select>
+                    
+                    <button type="submit" class="btn-book-now" style="width: 100%; padding: 12px; font-size: 1rem;">
                         KONFIRMASI PESANAN
                     </button>
                 </form>

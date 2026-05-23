@@ -36,6 +36,7 @@ CREATE TABLE reservasi (
     tanggal_masuk DATETIME NOT NULL,
     tanggal_keluar DATETIME NOT NULL,
     status_pesanan ENUM('Menunggu', 'Dikonfirmasi', 'Selesai') DEFAULT 'Menunggu',
+    metode_pembayaran VARCHAR(50) DEFAULT 'Pay at Hotel', -- FITUR BARU: Menyimpan metode bayar E-Voucher
     FOREIGN KEY (id_tamu) REFERENCES tamu(id_tamu) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -47,8 +48,6 @@ CREATE TABLE detail_reservasi (
     FOREIGN KEY (id_reservasi) REFERENCES reservasi(id_reservasi) ON DELETE CASCADE,
     FOREIGN KEY (id_kamar) REFERENCES kamar(id_kamar) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-
-
 
 
 -- 3. Input Data Tipe Kamar (Dengan Kapasitas yang Benar)
