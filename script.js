@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentPath.includes('detail.html')) { loadDetailKamar(); }
     else if (currentPath.includes('kamar.html')) { loadDataKamarGrid(); }
     else if (currentPath.includes('cek-pesanan.html')) { initCekPesanan(); }
+    else if (currentPath.includes('voucher.html')) { initVoucher(); } 
     else { loadDataBeranda(); initSearchEngine(); }
 });
 
@@ -382,4 +383,183 @@ function initCekPesanan() {
                 btnSubmit.disabled = false; 
             });
     });
+}
+
+// ==========================================
+// FITUR RESERVASI FASILITAS BARU
+// ==========================================
+let hargaFasilitasGlobal = 0;
+
+// Gambar pelengkap untuk fasilitas (karena di database tidak ada kolom gambar)
+const gambarFasilitas = {
+    1: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80', // Restoran
+    2: 'https://images.unsplash.com/photo-1574096079513-d8259312b78a?w=800&q=80', // Rooftop
+    3: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80', // Ballroom
+    4: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=80', // Meeting Room
+    5: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80', // Wedding
+    6: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&q=80'  // Spa
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Jika sedang di halaman detail fasilitas
+    if (window.location.pathname.includes('detail-fasilitas.html')) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fasId = urlParams.get('id');
+        
+        if (!fasId) return document.querySelector('.detail-content').innerHTML = '<h2>Fasilitas tidak ditemukan!</h2>';
+
+        // Ambil data fasilitas dari backend
+        fetch('http://127.0.0.1:5000/api/fasilitas')
+            .then(res => res.json())
+            .then(data => {
+                const fas = data.find(f => f.id_fasilitas == fasId);
+                if (fas) {
+                    hargaFasilitasGlobal = fas.harga_dasar;
+                    
+                    document.getElementById('fas-nama').textContent = fas.nama_fasilitas;
+                    document.getElementById('fas-kategori').textContent = fas.kategori;
+                    document.getElementById('fas-deskripsi').textContent = fas.deskripsi;
+                    document.getElementById('fas-harga').textContent = formatRupiah(fas.harga_dasar) + ' / ' + fas.satuan_harga;
+                    
+                    if (gambarFasilitas[fasId]) {
+                        document.getElementById('fas-img').src = gambarFasilitas[fasId];
+                    }
+
+                    hitungTotalFasilitas(); // Panggil pertama kali
+                }
+            });
+
+        // Trigger hitung total saat jumlah pax diubah
+        const paxInput = document.getElementById('fas-book-pax');
+        if(paxInput) {
+            paxInput.addEventListener('input', hitungTotalFasilitas);
+            paxInput.addEventListener('change', hitungTotalFasilitas);
+        }
+
+        // Handle Submit Form
+        const formFasilitas = document.getElementById('form-fasilitas');
+        if (formFasilitas) {
+            formFasilitas.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const btn = formFasilitas.querySelector('button');
+                btn.textContent = 'MEMPROSES...'; btn.disabled = true;
+
+                const payload = {
+                    id_fasilitas: fasId,
+                    nama: document.getElementById('fas-book-nama').value,
+                    email: document.getElementById('fas-book-email').value,
+                    telepon: document.getElementById('fas-book-tlp').value,
+                    tanggal: document.getElementById('fas-book-tanggal').value,
+                    waktu: document.getElementById('fas-book-waktu').value,
+                    pax: document.getElementById('fas-book-pax').value,
+                    catatan: document.getElementById('fas-book-catatan').value,
+                    total_harga: document.getElementById('fas-total-value').value,
+                    metode_pembayaran: document.getElementById('fas-metode-bayar').value
+                };
+
+                try {
+                    const res = await fetch('http://127.0.0.1:5000/api/buat-pesanan-fasilitas', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+                    
+                    if (result.status === 'success') {
+                        // 1. Sembunyikan area konten form dan gambar
+                        document.getElementById('konten-utama-fasilitas').style.display = 'none';
+
+                        // 2. Tampilkan kartu sukses
+                        document.getElementById('success-message-container').style.display = 'block';
+
+                        // 3. Masukkan teks ID Reservasi dari backend
+                        document.getElementById('id-reservasi-tampil').innerText = result.id_reservasi;
+
+                        // 4. Scroll layar otomatis ke bagian atas
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        alert("Gagal: " + result.message);
+                        btn.textContent = 'KONFIRMASI RESERVASI'; btn.disabled = false;
+                    }
+                } catch (err) {
+                    alert("Kesalahan jaringan.");
+                    btn.textContent = 'KONFIRMASI RESERVASI'; btn.disabled = false;
+                }
+            });
+        }
+    }
+});
+
+function hitungTotalFasilitas() {
+    const pax = document.getElementById('fas-book-pax').value;
+    const totalDisplay = document.getElementById('fas-total-display');
+    const totalValue = document.getElementById('fas-total-value');
+    
+    if (pax && pax > 0) {
+        const total = pax * hargaFasilitasGlobal;
+        totalDisplay.value = formatRupiah(total);
+        totalValue.value = total;
+    }
+}
+
+
+// ==========================================
+// FUNGSI HALAMAN VOUCHER
+// ==========================================
+function initVoucher() {
+    // 1. Ambil parameter ID dan Email dari URL browser
+    const urlParams = new URLSearchParams(window.location.search);
+    const idParam = urlParams.get('id');
+    const emailParam = urlParams.get('email');
+
+    if (!idParam || !emailParam) {
+        alert("Data pesanan tidak lengkap!");
+        return;
+    }
+
+    // 2. Tembak API backend untuk mengambil data
+    fetch(`http://127.0.0.1:5000/api/cek-pesanan?id=${idParam}&email=${emailParam}`)
+        .then(res => res.json())
+        .then(result => {
+            if (result.status === 'success') {
+                const data = result.data;
+                
+                // --- A. JIKA INI VOUCHER KAMAR ---
+                if (result.kategori === 'kamar') {
+                    // Pastikan ID elemen (seperti 'v-layanan') sama dengan yang ada di file voucher.html milikmu
+                    document.getElementById('v-layanan').innerText = "Kamar " + data.nama_tipe;
+                    document.getElementById('v-detail-1').innerText = "Check-in: " + data.tanggal_masuk;
+                    document.getElementById('v-detail-2').innerText = "Check-out: " + data.tanggal_keluar;
+                    document.getElementById('v-nomor').innerText = data.nomor_kamar;
+                } 
+                
+                // --- B. JIKA INI VOUCHER FASILITAS ---
+                else if (result.kategori === 'fasilitas') {
+                    document.getElementById('v-layanan').innerText = "Fasilitas: " + data.layanan;
+                    document.getElementById('v-detail-1').innerText = "Tanggal Acara: " + data.tanggal_acara;
+                    document.getElementById('v-detail-2').innerText = "Waktu Mulai: " + data.waktu_mulai;
+                    document.getElementById('v-nomor').innerText = "-"; // Tidak ada kamar
+                }
+
+                // --- C. DATA UMUM (Tamu & Pembayaran) ---
+                document.getElementById('v-nama').innerText = data.nama_lengkap;
+                document.getElementById('v-email').innerText = data.email;
+                document.getElementById('v-telepon').innerText = data.nomor_telepon;
+                
+                const hargaFinal = data.harga_terkunci || data.total_harga; 
+                document.getElementById('v-total').innerText = "Rp " + parseInt(hargaFinal).toLocaleString('id-ID');
+                document.getElementById('v-status').innerText = data.status_pesanan;
+                
+                // ID Reservasi di bagian atas voucher
+                const elemIdRes = document.getElementById('v-id-reservasi');
+                if(elemIdRes) elemIdRes.innerText = data.id_reservasi || idParam;
+
+            } else {
+                alert("Gagal memuat voucher: " + result.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Terjadi kesalahan saat memuat data voucher.");
+        });
 }

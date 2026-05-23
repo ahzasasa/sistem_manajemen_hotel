@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Fasilitas - Hotel Reservasi</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="logo">HOTEL RESERVASI</div>
+        <nav>
+            <ul>
+                <li><a href="index.html">Beranda</a></li>
+                <li><a href="kamar.html">Kamar</a></li>
+                <li><a href="fasilitas.html" style="font-weight: bold; border-bottom: 2px solid #101111;">Fasilitas</a></li>
+                <li><a href="cek-pesanan.html">Cek Pesanan</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="detail-container" id="konten-utama-fasilitas">
+        <div class="detail-content">
+            <h1 id="fas-nama">Memuat Fasilitas...</h1>
+            <p style="color: #A6824A; font-weight: bold; margin-top: -15px; margin-bottom: 20px; text-transform: uppercase;" id="fas-kategori">KATEGORI</p>
+            
+            <img id="fas-img" src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80" class="detail-hero-img" alt="Fasilitas">
+            
+            <h3>DESKRIPSI FASILITAS</h3>
+            <p id="fas-deskripsi" style="line-height: 1.8; color: #444;">-</p>
+        </div>
+
+        <div class="engine-sidebar">
+            <div class="booking-widget">
+                <h3 style="color: #101111; margin-bottom: 10px; border-bottom: 2px solid #E6E2DA; padding-bottom: 10px; font-size: 1.2rem;">Form Reservasi Fasilitas</h3>
+                <h2 id="fas-harga" style="color: #154230; margin-bottom: 20px; font-size: 1.5rem;">Rp 0</h2>
+                
+                <form id="form-fasilitas" class="sidebar-form">
+                    <label>Nama Lengkap Pemesan</label>
+                    <input type="text" id="fas-book-nama" required>
+                    
+                    <label>Email</label>
+                    <input type="email" id="fas-book-email" required>
+                    
+                    <label>Nomor Telepon / WA</label>
+                    <input type="number" id="fas-book-tlp" required>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label>Tanggal Acara</label>
+                            <input type="date" id="fas-book-tanggal" required>
+                        </div>
+                        <div>
+                            <label>Waktu Mulai</label>
+                            <input type="time" id="fas-book-waktu" required>
+                        </div>
+                    </div>
+                    
+                    <label>Jumlah (Pax / Paket)</label>
+                    <input type="number" id="fas-book-pax" min="1" value="1" required>
+
+                    <label>Catatan Tambahan (Opsional)</label>
+                    <textarea id="fas-book-catatan" rows="2" placeholder="Cth: Alergi kacang, letak meja dekat jendela, dll" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 15px;"></textarea>
+
+                    <label>Total Estimasi:</label>
+                    <input type="text" id="fas-total-display" readonly style="font-weight: bold; color: #5D1E21;">
+                    <input type="hidden" id="fas-total-value">
+                    
+                    <label style="margin-top: 15px; display: block; font-weight: bold;">Metode Pembayaran:</label>
+                    <select id="fas-metode-bayar" style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; background-color: white;">
+                        <option value="Transfer - BCA">Transfer - BCA</option>
+                        <option value="Transfer - Mandiri">Transfer - Mandiri</option>
+                        <option value="E-Wallet - GoPay">GoPay / QRIS</option>
+                        <option value="Credit Card">Kartu Kredit</option>
+                        <option value="Pay at Hotel">Bayar di Tempat</option>
+                    </select>
+                    
+                    <button type="submit" class="btn-book-now" style="width: 100%; padding: 12px; font-size: 1rem;">
+                        KONFIRMASI RESERVASI
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-message-container" style="display: none; text-align: center; padding: 50px 20px; background: #ffffff; border: 1px solid #ddd; border-radius: 8px; margin: 40px auto; max-width: 800px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <h2 style="color: #1e6b4e; font-weight: bold; margin-bottom: 10px;">🎉 PESANAN BERHASIL DIBUAT!</h2>
+        
+        <div style="background-color: #eadecd; display: inline-block; padding: 20px 50px; margin: 20px 0; border-radius: 5px;">
+            <p style="margin: 0; font-size: 12px; color: #555; text-transform: uppercase; font-weight: 600;">ID Reservasi Anda</p>
+            <h1 id="id-reservasi-tampil" style="margin: 5px 0 0 0; color: #5a2318; font-size: 42px; font-weight: bold;"></h1>
+        </div>
+        
+        <br>
+        <a href="cek-pesanan.html" style="display: inline-block; background-color: #5a2318; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin-top: 10px;">
+            PERGI KE CEK PESANAN ❯
+        </a>
+    </div>
+    
+    <footer class="site-footer">
+        <div class="footer-container">
+            
+            <div class="footer-col">
+                <h4>Hubungi Kami</h4>
+                <p>📍 Jl. Terogong Raya No. 17<br>Jakarta Selatan 12430 - Indonesia</p>
+                <p>📞 (021) 750 7050</p>
+                <p>✉️ info@hotelreservasi.com</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Media Sosial</h4>
+                <div class="social-grid">
+                    <a href="#">Instagram</a>
+                    <a href="#">TikTok</a>
+                    <a href="#">X (Twitter)</a>
+                    <a href="#">Facebook</a>
+                    <a href="#">YouTube</a>
+                    <a href="#">WhatsApp</a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer-bottom">
+            <p>Hak Cipta &copy; 2026 Hotel Reservasi</p>
+        </div>
+    </footer>
+    
+    <script src="script.js"></script>
+</body>
+</html>

@@ -133,23 +133,23 @@
         </tr>
     </table>
 
-    <div class="section-title">DETAIL HOTEL</div>
+    <div class="section-title" id="v-section-title">DETAIL LAYANAN</div>
     <table>
-        <tr>
-            <td class="col-label">Tipe Kamar</td>
-            <td id="v-tipe-kamar" style="font-weight: bold;">-</td>
+        <tr id="row-1">
+            <td class="col-label" id="lbl-1">-</td>
+            <td id="val-1" style="font-weight: bold;">-</td>
         </tr>
-        <tr>
-            <td class="col-label">Tanggal Masuk (Check-in)</td>
-            <td id="v-checkin">-</td>
+        <tr id="row-2">
+            <td class="col-label" id="lbl-2">-</td>
+            <td id="val-2">-</td>
         </tr>
-        <tr>
-            <td class="col-label">Tanggal Keluar (Check-out)</td>
-            <td id="v-checkout">-</td>
+        <tr id="row-3">
+            <td class="col-label" id="lbl-3">-</td>
+            <td id="val-3">-</td>
         </tr>
-        <tr>
-            <td class="col-label">Nomor Kamar</td>
-            <td style="font-weight: bold; font-size: 18px; color: #154230;" id="v-no-kamar">-</td>
+        <tr id="row-4">
+            <td class="col-label" id="lbl-4">-</td>
+            <td style="font-weight: bold; font-size: 18px; color: #154230;" id="val-4">-</td>
         </tr>
     </table>
 
@@ -167,7 +167,7 @@
 
     <div style="margin-top: 40px; font-size: 13px; color: #666; line-height: 1.5; border-top: 1px dashed #ccc; padding-top: 20px;">
         <strong>Catatan Penting:</strong><br>
-        * Mohon tunjukkan e-voucher ini beserta kartu identitas resmi Anda saat melakukan Check-in di resepsionis.<br>
+        * Mohon tunjukkan e-voucher ini beserta kartu identitas resmi Anda saat tiba di lokasi.<br>
     </div>
 
     <button class="print-btn" onclick="window.print()">🖨️ CETAK SEBAGAI PDF</button>
@@ -183,18 +183,61 @@
         if(id && email) {
             fetch(`http://127.0.0.1:5000/api/cek-pesanan?id=${id}&email=${email}`)
             .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    const p = data.data;
+            .then(result => {
+                if(result.status === 'success') {
+                    const p = result.data;
+                    const kategori = result.kategori;
+                    
+                    // --- DATA UMUM ---
                     document.getElementById('v-order-id').textContent = p.id_reservasi;
                     document.getElementById('v-nama').textContent = p.nama_lengkap;
                     document.getElementById('v-telepon').textContent = p.nomor_telepon;
-                    document.getElementById('v-tipe-kamar').textContent = p.nama_tipe;
-                    document.getElementById('v-checkin').textContent = new Date(p.tanggal_masuk).toLocaleString('id-ID', opsiWaktu).replace('.', ':') + ' WIB';
-                    document.getElementById('v-checkout').textContent = new Date(p.tanggal_keluar).toLocaleString('id-ID', opsiWaktu).replace('.', ':') + ' WIB';
-                    document.getElementById('v-no-kamar').textContent = p.nomor_kamar;
-                    document.getElementById('v-metode').textContent = p.metode_pembayaran || 'Transfer Bank';
-                    document.getElementById('v-total').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(p.harga_terkunci);
+                    document.getElementById('v-status').textContent = p.status_pesanan.toUpperCase();
+                    
+                    let hargaFinal = 0;
+
+                    // --- JIKA VOUCHER KAMAR ---
+                    if (kategori === 'kamar') {
+                        document.getElementById('v-section-title').textContent = "DETAIL KAMAR";
+                        
+                        document.getElementById('lbl-1').textContent = "Tipe Kamar";
+                        document.getElementById('val-1').textContent = p.nama_tipe;
+                        
+                        document.getElementById('lbl-2').textContent = "Tanggal Masuk (Check-in)";
+                        document.getElementById('val-2').textContent = new Date(p.tanggal_masuk).toLocaleString('id-ID', opsiWaktu).replace('.', ':') + ' WIB';
+                        
+                        document.getElementById('lbl-3').textContent = "Tanggal Keluar (Check-out)";
+                        document.getElementById('val-3').textContent = new Date(p.tanggal_keluar).toLocaleString('id-ID', opsiWaktu).replace('.', ':') + ' WIB';
+                        
+                        document.getElementById('lbl-4').textContent = "Nomor Kamar";
+                        document.getElementById('val-4').textContent = p.nomor_kamar;
+                        
+                        hargaFinal = p.harga_terkunci;
+                    } 
+                    // --- JIKA VOUCHER FASILITAS ---
+                    else if (kategori === 'fasilitas') {
+                        document.getElementById('v-section-title').textContent = "DETAIL FASILITAS";
+                        
+                        document.getElementById('lbl-1').textContent = "Layanan Terpilih";
+                        document.getElementById('val-1').textContent = p.layanan;
+                        
+                        const tglAcara = new Date(p.tanggal_acara).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
+                        document.getElementById('lbl-2').textContent = "Tanggal Acara";
+                        document.getElementById('val-2').textContent = tglAcara;
+                        
+                        document.getElementById('lbl-3').textContent = "Waktu Mulai";
+                        document.getElementById('val-3').textContent = p.waktu_mulai + ' WIB';
+                        
+                        // Sembunyikan baris ke-4 karena fasilitas tidak ada nomor kamar
+                        document.getElementById('row-4').style.display = 'none';
+                        
+                        hargaFinal = p.total_harga;
+                    }
+
+                    // --- PEMBAYARAN ---
+                    document.getElementById('v-metode').textContent = p.metode_pembayaran || 'Transfer Bank / Lainnya';
+                    document.getElementById('v-total').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(hargaFinal);
+                    
                 } else {
                     alert('Data pesanan tidak ditemukan!');
                 }

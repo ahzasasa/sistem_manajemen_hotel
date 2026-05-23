@@ -50,6 +50,33 @@ CREATE TABLE detail_reservasi (
 ) ENGINE=InnoDB;
 
 
+-- 1. Tabel Master Fasilitas
+CREATE TABLE fasilitas (
+    id_fasilitas INT AUTO_INCREMENT PRIMARY KEY,
+    nama_fasilitas VARCHAR(100) NOT NULL,
+    kategori ENUM('F&B', 'Event', 'Wellness') NOT NULL,
+    harga_dasar DECIMAL(12,2) NOT NULL,
+    satuan_harga VARCHAR(20) NOT NULL,
+    deskripsi TEXT
+) ENGINE=InnoDB;
+
+-- 2. Tabel Transaksi Reservasi Fasilitas (INI YANG ADA ID-NYA)
+CREATE TABLE reservasi_fasilitas (
+    id_res_fasilitas VARCHAR(20) PRIMARY KEY, 
+    id_tamu INT,
+    id_fasilitas INT,
+    tanggal_acara DATE NOT NULL,
+    waktu_mulai TIME NOT NULL,
+    jumlah_tamu INT NOT NULL, 
+    total_harga DECIMAL(12, 2) NOT NULL,
+    status_pesanan ENUM('Menunggu', 'Dikonfirmasi', 'Batal', 'Selesai') DEFAULT 'Menunggu',
+    metode_pembayaran VARCHAR(50),
+    catatan_khusus TEXT, 
+    FOREIGN KEY (id_tamu) REFERENCES tamu(id_tamu) ON DELETE CASCADE,
+    FOREIGN KEY (id_fasilitas) REFERENCES fasilitas(id_fasilitas) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
 -- 3. Input Data Tipe Kamar (Dengan Kapasitas yang Benar)
 INSERT INTO tipe_kamar VALUES 
 (1, 'Standard King', 2, 3, 5, 500000),
@@ -557,3 +584,12 @@ INSERT INTO kamar (id_tipe, nomor_kamar, status) VALUES
 (13, '2502', 'Tersedia'),
 (13, '2503', 'Tersedia'),
 (13, '2504', 'Tersedia');
+
+
+INSERT INTO fasilitas (nama_fasilitas, kategori, harga_dasar, satuan_harga, deskripsi) VALUES
+('Restaurant Reservation', 'F&B', 250000, 'per orang', 'Reservasi meja makan VIP dengan set menu eksklusif.'),
+('Rooftop Bar', 'F&B', 150000, 'per orang', 'Akses ke rooftop bar dengan pemandangan kota, termasuk 1 welcome drink.'),
+('Ballroom', 'Event', 35000000, 'per hari', 'Sewa ballroom utama berkapasitas besar untuk berbagai acara elegan.'),
+('Meeting Room', 'Event', 550000, 'per orang', 'Paket Pertemuan Sehari Penuh (8 Jam) termasuk sewa ruangan, 2x Coffee Break & 1x Makan Siang/Malam.'),
+('Wedding Package', 'Event', 85000000, 'per paket', 'Paket pernikahan komprehensif termasuk katering, dekorasi standar, dan kamar pengantin.'),
+('Spa & Wellness', 'Wellness', 450000, 'per sesi', 'Sesi relaksasi pijat tradisional selama 90 menit oleh terapis profesional.');

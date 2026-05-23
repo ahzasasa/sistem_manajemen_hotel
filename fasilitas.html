@@ -5,10 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fasilitas - Hotel Reservasi</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Gaya tambahan khusus halaman fasilitas agar sesuai dengan screenshot */
+        body { background-color: #E6E2DA; }
+        .fasilitas-header { text-align: center; margin: 50px 0; }
+        .fasilitas-header h1 { border-bottom: 2px solid #101111; display: inline-block; padding-bottom: 10px; font-size: 2rem; letter-spacing: 2px; }
+        .fasilitas-header h2 { font-size: 1.8rem; margin-top: 40px; letter-spacing: 1.5px; color: #101111; }
+        
+        .fb-section { display: flex; flex-wrap: wrap; max-width: 1000px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .fb-img { flex: 1; min-width: 300px; }
+        .fb-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .fb-text { flex: 1; min-width: 300px; background: white; padding: 60px 40px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .fb-text h3 { color: #154230; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 20px; text-transform: uppercase; }
+        .fb-text p { color: #555; line-height: 1.8; margin-bottom: 30px; font-size: 0.95rem; }
+        .btn-outline { border: 1px solid #A6824A; color: #A6824A; padding: 12px 25px; text-decoration: none; font-weight: bold; letter-spacing: 1px; transition: 0.3s; }
+        .btn-outline:hover { background: #A6824A; color: white; }
+
+        .event-section { max-width: 1200px; margin: 0 auto 80px auto; padding: 0 20px; }
+        .event-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+        .event-gallery img { width: 100%; height: 250px; object-fit: cover; }
+        
+        .event-details { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; }
+        .event-info h4 { font-size: 1.1rem; color: #101111; margin-bottom: 10px; }
+        .event-info p { color: #555; line-height: 1.6; font-size: 0.9rem; margin-bottom: 25px; }
+        .event-info ul { color: #555; line-height: 1.8; font-size: 0.9rem; padding-left: 20px; }
+        
+        .booking-box { background: #E1DCD3; padding: 30px; text-align: center; border-radius: 4px; }
+        .booking-box h4 { margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; }
+        .btn-black { display: block; background: #101111; color: white; padding: 15px; margin-bottom: 12px; text-decoration: none; font-weight: bold; font-size: 0.85rem; letter-spacing: 1px; transition: 0.3s; }
+        .btn-black:hover { background: #154230; }
+        
+        .wa-float { position: fixed; bottom: 30px; right: 30px; background: #154230; color: white; padding: 15px 25px; border-radius: 30px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 100; transition: 0.3s; }
+        .wa-float:hover { background: #101111; }
+        
+        @media (max-width: 768px) {
+            .event-gallery { grid-template-columns: 1fr; }
+            .event-details { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
 
-    <header class="navbar">
+    <header class="navbar" style="background: white;">
         <div class="logo">HOTEL RESERVASI</div>
         <nav>
             <ul>
@@ -20,50 +58,56 @@
         </nav>
     </header>
 
-    <div class="page-header">
+    <div class="fasilitas-header">
         <h1>FASILITAS KAMI</h1>
+        <h2>RESTORAN & BAR</h2>
     </div>
 
-    <section class="facility-section">
-        <h2 class="section-title-center">RESTORAN & BAR</h2>
-        <div class="split-layout">
-            <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80" alt="Restoran Anggrek" class="split-img">
-            <div class="split-text">
-                <h3>RESTORAN ANGGREK</h3>
-                <p>Restoran Anggrek adalah tempat yang sempurna untuk pertemuan sarapan, makan siang bisnis, atau makan malam. Nikmati beragam hidangan internasional kami yang luar biasa, mulai dari hidangan favorit Barat, Asia, hingga Indonesia.</p>
-                <a href="#" class="btn-outline">PELAJARI LEBIH LANJUT</a>
-            </div>
-
-            <div class="split-text">
-                <h3>SATU LAGI BAR</h3>
-                <p>Bersantailah bersama teman-teman Anda sambil menikmati satu atau dua minuman. Nikmati beragam pilihan steak dan hidangan spesial harian lainnya yang menggugah selera. Kami menghibur Anda setiap Rabu hingga Jumat malam dengan penampilan band akustik lokal.</p>
-                <a href="#" class="btn-outline">PELAJARI LEBIH LANJUT</a>
-            </div>
-            <img src="https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&q=80" alt="Satu Lagi Bar" class="split-img">
+    <div class="fb-section">
+        <div class="fb-img">
+            <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80" alt="Restoran Anggrek">
         </div>
-    </section>
+        <div class="fb-text">
+            <h3>RESTORAN ANGGREK</h3>
+            <p>Restoran Anggrek adalah tempat yang sempurna untuk pertemuan sarapan, makan siang bisnis, atau makan malam. Nikmati beragam hidangan internasional kami yang luar biasa, mulai dari hidangan favorit Barat, Asia, hingga Indonesia.</p>
+            <a href="detail-fasilitas.html?id=1" class="btn-outline">RESERVASI MEJA</a>
+        </div>
+    </div>
 
-    <section class="facility-section bg-light">
-        <h2 class="section-title-center">PERTEMUAN & ACARA</h2>
-        
-        <div class="meeting-images">
-            <img src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&q=80" alt="Outdoor Event">
-            <img src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=600&q=80" alt="Tent Event">
-            <img src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=600&q=80" alt="Indoor Meeting">
+    <div class="fb-section" style="margin-top: 0; flex-direction: row-reverse;">
+        <div class="fb-img">
+            <img src="https://images.unsplash.com/photo-1574096079513-d8259312b78a?w=800&q=80" alt="Satu Lagi Bar">
+        </div>
+        <div class="fb-text">
+            <h3>SATU LAGI BAR</h3>
+            <p>Bersantailah bersama teman-teman Anda sambil menikmati satu atau dua minuman. Nikmati beragam pilihan steak dan hidangan spesial harian lainnya yang menggugah selera. Kami menghibur Anda setiap Rabu hingga Jumat malam dengan penampilan band akustik lokal.</p>
+            <a href="detail-fasilitas.html?id=2" class="btn-outline">RESERVASI BAR</a>
+        </div>
+    </div>
+
+    <div class="fasilitas-header">
+        <h2>PERTEMUAN & ACARA</h2>
+    </div>
+
+    <div class="event-section">
+        <div class="event-gallery">
+            <img src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80" alt="Ballroom">
+            <img src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80" alt="Wedding">
+            <img src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=80" alt="Meeting Room">
         </div>
 
-        <div class="meeting-details-grid">
-            <div class="meeting-col">
+        <div class="event-details">
+            <div class="event-info">
                 <h4>Paket Pertemuan Sehari Penuh (8 Jam)</h4>
-                <p>Rp. 550.000 net/orang<br>Termasuk: 2 x Coffee Break dengan 3 jenis makanan ringan, 1 x Makan Siang/Makan Malam, Sewa Ruang Pertemuan & Peralatan Standar.</p>
+                <p>Rp. 550.000 net/orang<br>Termasuk: 2 x Coffee Break dengan 3 jenis makanan ringan, 1 x Makan Siang/Malam, Sewa Ruang Pertemuan & Peralatan Standar.</p>
                 
-                <h4 style="margin-top: 25px;">Paket Pertemuan Setengah Hari (4 Jam)</h4>
+                <h4>Paket Pertemuan Setengah Hari (4 Jam)</h4>
                 <p>Rp. 400.000 net/orang<br>Termasuk: 1 x Coffee Break dengan 3 jenis camilan, 1 x Makan Siang, Sewa Ruang Pertemuan & Peralatan Standar.</p>
             </div>
             
-            <div class="meeting-col">
+            <div class="event-info">
                 <h4>Fasilitas Rapat yang termasuk:</h4>
-                <ul class="amenity-list">
+                <ul>
                     <li>Penggunaan gratis satu (1) layar normal</li>
                     <li>Penggunaan gratis dua (2) Flip Chart, spidol</li>
                     <li>Penggunaan buku catatan dan bolpoin gratis</li>
@@ -72,51 +116,16 @@
                     <li>Koneksi internet Wi-Fi gratis</li>
                 </ul>
             </div>
-
-            <div class="meeting-col virtual-tour-box">
-                <h4 style="text-align: center; margin-bottom: 20px;">Tur Virtual Ruangan</h4>
-                <a href="#" class="btn-dark-block">LIHAT RUANG BALLROOM CRYSTAL</a>
-                <a href="#" class="btn-dark-block">LIHAT KAMAR OPAL</a>
-                <a href="#" class="btn-dark-block">LIHAT KAMAR RUBY</a>
-                <a href="#" class="btn-dark-block">LIHAT RUANG SAPPHIRE</a>
-                <a href="#" class="btn-dark-block">LIHAT KAMAR EMERALD</a>
+            
+            <div class="booking-box">
+                <h4>Reservasi Ruang & Layanan</h4>
+                <a href="detail-fasilitas.html?id=3" class="btn-black">RESERVASI BALLROOM</a>
+                <a href="detail-fasilitas.html?id=4" class="btn-black">RESERVASI MEETING ROOM</a>
+                <a href="detail-fasilitas.html?id=5" class="btn-black">LIHAT PAKET WEDDING</a>
+                <a href="detail-fasilitas.html?id=6" class="btn-black">RESERVASI SPA & WELLNESS</a>
             </div>
         </div>
-    </section>
-
-    <section class="facility-section">
-        <h2 class="section-title-center">TEMPAT PERNIKAHAN, PAKET PERNIKAHAN, & ACARA SOSIAL</h2>
-        
-        <div class="wedding-hero">
-            <img src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=1200&q=80" alt="Pernikahan Mewah">
-        </div>
-        
-        <p class="wedding-intro">
-            Terletak di pusat kota, Hotel Reservasi menawarkan lokasi pernikahan yang sempurna untuk momen spesial Anda, mulai dari acara kecil yang intim hingga perayaan pernikahan mewah dengan tiga pilihan tempat: ballroom, tepi kolam renang, dan taman. Tim acara profesional kami berdedikasi untuk menjadikan acara Anda luar biasa dan tak terlupakan, dengan keramahan dan layanan yang hangat.
-            <br><br>
-            <strong>Jadikan pernikahan Anda tak terlupakan dan benar-benar berkesan dengan paket khusus kami.</strong>
-        </p>
-
-        <div class="wedding-packages-grid">
-            <div class="wedding-card">
-                <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400&q=80" alt="Paket Crystal">
-                <h4>Paket Pernikahan Kristal</h4>
-                <p>Sebuah perayaan cinta yang agung, dirancang untuk memancarkan keanggunan dan kenangan tak terlupakan.</p>
-            </div>
-            <div class="wedding-card">
-                <img src="https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=400&q=80" alt="Paket Intim">
-                <h4>Paket Pernikahan Intim</h4>
-                <p>Sebuah perayaan tulus untuk lingkaran terdekat Anda, di mana setiap detail terasa personal dan berharga.</p>
-            </div>
-            <div class="wedding-card">
-                <img src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80" alt="Paket Opal">
-                <h4>Paket Pernikahan Opal</h4>
-                <p>Sebuah perayaan meriah yang dipenuhi dengan cinta, tawa, dan momen tak terlupakan yang dibagikan dengan semua orang.</p>
-            </div>
-        </div>
-    </section>
-
-    <a href="#" class="float-wa">Hubungi Kami via WhatsApp</a>
+    </div>
 
     <footer class="site-footer">
         <div class="footer-container">
@@ -147,5 +156,8 @@
         </div>
     </footer>
 
+    <a href="#" class="wa-float">Hubungi Kami via WhatsApp</a>
+
+    <script src="script.js"></script>
 </body>
 </html>

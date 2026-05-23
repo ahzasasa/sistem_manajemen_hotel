@@ -114,29 +114,57 @@ def cek_pesanan():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # PERBAIKAN: Menambahkan t.nomor_telepon agar ikut dikirim ke frontend
-        query = """
-            SELECT r.*, t.nama_lengkap, t.email, t.nomor_telepon, k.nomor_kamar, tk.nama_tipe, d.harga_terkunci
-            FROM reservasi r
-            JOIN tamu t ON r.id_tamu = t.id_tamu
-            JOIN detail_reservasi d ON r.id_reservasi = d.id_reservasi
-            JOIN kamar k ON d.id_kamar = k.id_kamar
-            JOIN tipe_kamar tk ON k.id_tipe = tk.id_tipe
-            WHERE r.id_reservasi = %s AND t.email = %s
-        """
-        cursor.execute(query, (id_res, email))
-        pesanan = cursor.fetchone()
-        
-        if pesanan:
-            if isinstance(pesanan['tanggal_masuk'], datetime):
-                pesanan['tanggal_masuk'] = pesanan['tanggal_masuk'].strftime('%Y-%m-%dT%H:%M:%S')
-            if isinstance(pesanan['tanggal_keluar'], datetime):
-                pesanan['tanggal_keluar'] = pesanan['tanggal_keluar'].strftime('%Y-%m-%dT%H:%M:%S')
-                    
-            return jsonify({"status": "success", "data": pesanan})
-        else:
-            return jsonify({"status": "not_found", "message": "Pesanan tidak ditemukan."}), 404
+        # --- LOGIKA BARU: DETEKSI FASILITAS ---
+        # Jika ID mengandung huruf awalan modul fasilitas (EV, SP, FB, FS, dll)
+        if id_res.startswith(('EV', 'SP', 'FB', 'FS', 'BL', 'MR', 'WD', 'F')):
+            query = """
+                SELECT rf.id_res_fasilitas AS id_reservasi, t.nama_lengkap, t.email, t.nomor_telepon,
+                       f.nama_fasilitas AS layanan, rf.tanggal_acara, rf.waktu_mulai,
+                       rf.status_pesanan, rf.total_harga
+                FROM reservasi_fasilitas rf
+                JOIN tamu t ON rf.id_tamu = t.id_tamu
+                JOIN fasilitas f ON rf.id_fasilitas = f.id_fasilitas
+                WHERE rf.id_res_fasilitas = %s AND t.email = %s
+            """
+            cursor.execute(query, (id_res, email))
+            pesanan = cursor.fetchone()
             
+            if pesanan:
+                # Format penanggalan dan waktu agar bisa dibaca JSON
+                if hasattr(pesanan['tanggal_acara'], 'strftime'):
+                    pesanan['tanggal_acara'] = pesanan['tanggal_acara'].strftime('%Y-%m-%d')
+                if hasattr(pesanan['waktu_mulai'], 'total_seconds'):
+                    hours, remainder = divmod(pesanan['waktu_mulai'].seconds, 3600)
+                    minutes, _ = divmod(remainder, 60)
+                    pesanan['waktu_mulai'] = f"{hours:02d}:{minutes:02d}"
+                    
+                return jsonify({"status": "success", "kategori": "fasilitas", "data": pesanan})
+
+        # --- LOGIKA LAMA: DETEKSI KAMAR ---
+        else:
+            query = """
+                SELECT r.*, t.nama_lengkap, t.email, t.nomor_telepon, k.nomor_kamar, tk.nama_tipe, d.harga_terkunci
+                FROM reservasi r
+                JOIN tamu t ON r.id_tamu = t.id_tamu
+                JOIN detail_reservasi d ON r.id_reservasi = d.id_reservasi
+                JOIN kamar k ON d.id_kamar = k.id_kamar
+                JOIN tipe_kamar tk ON k.id_tipe = tk.id_tipe
+                WHERE r.id_reservasi = %s AND t.email = %s
+            """
+            cursor.execute(query, (id_res, email))
+            pesanan = cursor.fetchone()
+            
+            if pesanan:
+                if hasattr(pesanan['tanggal_masuk'], 'strftime'):
+                    pesanan['tanggal_masuk'] = pesanan['tanggal_masuk'].strftime('%Y-%m-%dT%H:%M:%S')
+                if hasattr(pesanan['tanggal_keluar'], 'strftime'):
+                    pesanan['tanggal_keluar'] = pesanan['tanggal_keluar'].strftime('%Y-%m-%dT%H:%M:%S')
+                    
+                return jsonify({"status": "success", "kategori": "kamar", "data": pesanan})
+        
+        # Jika tidak masuk di kedua kondisi atau data kosong
+        return jsonify({"status": "not_found", "message": "Pesanan tidak ditemukan."}), 404
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
         
@@ -237,6 +265,107 @@ def selesai_reservasi():
         conn.commit()
         return jsonify({"status": "success", "message": "Kamar sudah tersedia kembali."})
         
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+
+# ==========================================
+# ENDPOINT KHUSUS FASILITAS
+# ==========================================
+
+# Endpoint untuk mengambil data fasilitas
+@app.route('/api/fasilitas', methods=['GET'])
+def get_fasilitas():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM fasilitas")
+    fasilitas = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(fasilitas)
+
+# Endpoint untuk memproses pemesanan fasilitas
+@app.route('/api/buat-pesanan-fasilitas', methods=['POST'])
+def buat_pesanan_fasilitas():
+    data = request.json
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # 1. Identifikasi Tamu
+        cursor.execute("SELECT id_tamu FROM tamu WHERE email = %s", (data['email'],))
+        tamu = cursor.fetchone()
+        if tamu:
+            id_tamu = tamu['id_tamu']
+            cursor.execute("UPDATE tamu SET nama_lengkap=%s, nomor_telepon=%s WHERE id_tamu=%s",
+                           (data['nama'], data['telepon'], id_tamu))
+        else:
+            cursor.execute("INSERT INTO tamu (nama_lengkap, email, nomor_telepon) VALUES (%s, %s, %s)",
+                           (data['nama'], data['email'], data['telepon']))
+            id_tamu = cursor.lastrowid
+
+# 2. Ekstraksi Info Fasilitas (Ambil nama dan kategori)
+        cursor.execute("SELECT nama_fasilitas, kategori FROM fasilitas WHERE id_fasilitas = %s", (data['id_fasilitas'],))
+        fasilitas_info = cursor.fetchone()
+        
+        # Ubah nama jadi huruf kecil semua agar mudah dideteksi
+        nama_fas = fasilitas_info['nama_fasilitas'].lower() if fasilitas_info else ''
+        kategori_terpilih = fasilitas_info['kategori'] if fasilitas_info else 'Event'
+
+        # 3. Pembentukan ID Modular (Berdasarkan Kata Kunci Nama)
+        if 'ballroom' in nama_fas:
+            prefiks = 'BL'
+        elif 'wedding' in nama_fas or 'pernikahan' in nama_fas:  # <-- Ini dia jalur khusus Wedding
+            prefiks = 'WD'
+        elif 'meeting' in nama_fas or 'rapat' in nama_fas:
+            prefiks = 'MR'
+        elif 'spa' in nama_fas or 'pijat' in nama_fas:
+            prefiks = 'SP'
+        elif 'kebugaran' in nama_fas or 'fitness' in nama_fas or 'gym' in nama_fas:
+            prefiks = 'FT'
+        else:
+            # Jika tidak ada yang cocok, gunakan default bawaan kategori
+            prefiks_map = {'Event': 'EV', 'Wellness': 'SP', 'F&B': 'FB'}
+            prefiks = prefiks_map.get(kategori_terpilih, 'FS')
+        
+        # Konversi format penanggalan
+        tgl_obj = datetime.strptime(data['tanggal'], '%Y-%m-%d')
+        tgl_dmy = tgl_obj.strftime("%d%m%y")
+        pola_cari = f"{prefiks}-{tgl_dmy}%"
+
+        # Pencarian urutan data terakhir
+        kueri_urut = """
+            SELECT IFNULL(MAX(CAST(RIGHT(id_res_fasilitas, 2) AS UNSIGNED)), 0) + 1 AS urut_baru 
+            FROM reservasi_fasilitas 
+            WHERE id_res_fasilitas LIKE %s
+        """
+        cursor.execute(kueri_urut, (pola_cari,))
+        hasil_urut = cursor.fetchone()
+        urutan_baru = int(hasil_urut['urut_baru']) if hasil_urut and hasil_urut['urut_baru'] is not None else 1
+
+        # Penggabungan string ID final
+        new_id = f"{prefiks}-{tgl_dmy}{urutan_baru:02d}"
+
+        # 4. Penyimpanan Data Reservasi
+        query = """
+            INSERT INTO reservasi_fasilitas 
+            (id_res_fasilitas, id_tamu, id_fasilitas, tanggal_acara, waktu_mulai, jumlah_tamu, total_harga, status_pesanan, metode_pembayaran, catatan_khusus) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'Dikonfirmasi', %s, %s)
+        """
+        cursor.execute(query, (
+            new_id, id_tamu, data['id_fasilitas'], data['tanggal'], data['waktu'], 
+            data['pax'], data['total_harga'], data['metode_pembayaran'], data['catatan']
+        ))
+        
+        conn.commit()
+        return jsonify({"status": "success", "message": "Reservasi fasilitas berhasil!", "id_reservasi": new_id})
+
     except Exception as e:
         if conn: conn.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
