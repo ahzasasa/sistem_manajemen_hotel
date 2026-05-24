@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Akses | Hotel Reservasi</title>
+    <link href="login.css" rel="stylesheet">
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-header">
+            <h1>HOTEL RESERVASI</h1>
+            <p>PORTAL AKSES UTAMA</p>
+        </div>
+
+        <div class="role-selector">
+            <button id="btn-tab-tamu" class="role-btn active" onclick="pilihPeran('tamu')">Tamu Hotel</button>
+            <button id="btn-tab-admin" class="role-btn" onclick="pilihPeran('admin')">Staff / Admin</button>
+        </div>
+
+        <div id="form-tamu" class="form-section active">
+            <p style="color: #666; margin-bottom: 25px; line-height: 1.5;">
+                Selamat datang di layanan reservasi kami. Silakan masuk untuk melihat pilihan kamar terbaik, fasilitas eksklusif, dan melakukan pemesanan.
+            </p>
+            <button class="btn-login btn-tamu" onclick="window.location.href='index.html'">MASUK KE BERANDA HOTEL</button>
+        </div>
+
+        <div id="form-admin" class="form-section">
+            <form id="form-login-admin">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Masukkan username admin..." required autocomplete="off">
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Masukkan password rahasia..." required>
+                </div>
+
+                <button type="submit" class="btn-login btn-admin">MASUK KE DASHBOARD</button>
+                <div id="pesan-error" class="error-message">Akses Ditolak: Username atau Password salah!</div>
+            </form>
+        </div>
+
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>

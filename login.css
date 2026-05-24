@@ -1,0 +1,138 @@
+/* ==========================================
+   DESAIN PORTAL MASUK UTAMA
+   ========================================== */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #E6E2DA; /* Beige khas hotel kita */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-container {
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 400px;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border-top: 8px solid #A6824A; /* Aksen emas */
+    text-align: center;
+}
+
+.login-header h1 {
+    color: #154230;
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: 1px;
+}
+
+.login-header p {
+    color: #A6824A;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin-top: 5px;
+    margin-bottom: 25px;
+}
+
+/* Pemilih Peran (Tab) */
+.role-selector {
+    display: flex;
+    margin-bottom: 30px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    background: #f8f9fa;
+}
+
+.role-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+    font-size: 14px;
+}
+
+.role-btn.active {
+    background: #154230; /* Hijau Gelap */
+    color: white;
+}
+
+/* Pengendali Form */
+.form-section {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+.form-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Elemen Input & Tombol */
+.input-group {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    font-weight: bold;
+    color: #666;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #154230;
+}
+
+.btn-login {
+    width: 100%;
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-top: 10px;
+}
+
+/* Tombol Tamu vs Admin */
+.btn-tamu { background-color: #5D1E21; } /* Merah Marun */
+.btn-tamu:hover { background-color: #3d1315; }
+
+.btn-admin { background-color: #154230; } /* Hijau Gelap */
+.btn-admin:hover { background-color: #0c2b1f; }
+
+.error-message {
+    color: #d9534f;
+    font-size: 14px;
+    margin-top: 15px;
+    display: none;
+    font-weight: bold;
+}

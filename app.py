@@ -430,7 +430,131 @@ def bayar_pesanan():
         if cursor: cursor.close()
         if conn: conn.close()
         
+
+# ==========================================
+# ENDPOINT DASHBOARD ADMIN
+# ==========================================
+@app.route('/api/admin-dashboard', methods=['GET'])
+def admin_dashboard():
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # 1. Hitung Okupansi & Kamar Terisi (Tamu In-House)
+        cursor.execute("SELECT COUNT(*) as total_kamar FROM kamar")
+        total_kamar = cursor.fetchone()['total_kamar']
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT d.id_kamar) as kamar_terisi 
+            FROM detail_reservasi d
+            JOIN reservasi r ON d.id_reservasi = r.id_reservasi
+            WHERE r.status_pesanan != 'Batal' 
+            AND DATE(NOW()) >= DATE(r.tanggal_masuk) 
+            AND DATE(NOW()) < DATE(r.tanggal_keluar)
+        """)
+        kamar_terisi = cursor.fetchone()['kamar_terisi']
+        okupansi = int((kamar_terisi / total_kamar) * 100) if total_kamar > 0 else 0
+
+        # 2. Arus Kedatangan & Keberangkatan Hari Ini
+        cursor.execute("SELECT COUNT(*) as checkin FROM reservasi WHERE DATE(tanggal_masuk) = DATE(NOW()) AND status_pesanan != 'Batal'")
+        checkin_hari_ini = cursor.fetchone()['checkin']
+
+        cursor.execute("SELECT COUNT(*) as checkout FROM reservasi WHERE DATE(tanggal_keluar) = DATE(NOW()) AND status_pesanan != 'Batal'")
+        checkout_hari_ini = cursor.fetchone()['checkout']
+
+        # 3. Pendapatan Hari Ini
+        cursor.execute("SELECT SUM(nominal) as total_pendapatan FROM pembayaran WHERE DATE(tanggal_bayar) = DATE(NOW())")
+        pend_hari_ini = cursor.fetchone()['total_pendapatan']
+        pendapatan_hari_ini = pend_hari_ini if pend_hari_ini else 0
+
+        # 4. Rasio Status Invoice
+        cursor.execute("SELECT status_pembayaran, COUNT(*) as jumlah FROM invoice GROUP BY status_pembayaran")
+        status_invoice = cursor.fetchall()
+        inv_stats = {'Lunas': 0, 'DP Dibayar': 0, 'Belum Dibayar': 0}
+        for stat in status_invoice:
+            inv_stats[stat['status_pembayaran']] = stat['jumlah']
+
+        # 5. Daftar Reservasi (Untuk Tabel Meja Kerja)
+        cursor.execute("""
+            SELECT r.id_reservasi, t.nama_lengkap, k.nomor_kamar, r.tanggal_masuk, r.tanggal_keluar, i.status_pembayaran 
+            FROM reservasi r
+            JOIN tamu t ON r.id_tamu = t.id_tamu
+            JOIN detail_reservasi d ON r.id_reservasi = d.id_reservasi
+            JOIN kamar k ON d.id_kamar = k.id_kamar
+            JOIN invoice i ON r.id_reservasi = i.id_reservasi
+            ORDER BY r.tanggal_masuk DESC LIMIT 50
+        """)
+        daftar_reservasi = cursor.fetchall()
+
+        for res in daftar_reservasi:
+            res['tanggal_masuk'] = res['tanggal_masuk'].strftime('%d %b %Y')
+            res['tanggal_keluar'] = res['tanggal_keluar'].strftime('%d %b %Y')
+
+        return jsonify({
+            "status": "success",
+            "okupansi": okupansi,
+            "checkin": checkin_hari_ini,
+            "checkout": checkout_hari_ini,
+            "pendapatan": pendapatan_hari_ini,
+            "invoice": inv_stats,
+            "reservasi": daftar_reservasi
+        })
         
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+# ==========================================
+# ENDPOINT HOUSEKEEPING & PENUGASAN STAF
+# ==========================================
+@app.route('/api/staf-housekeeping', methods=['GET'])
+def get_staf_housekeeping():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    # Menjalankan query untuk menarik staf spesifik kebersihan
+    cursor.execute("SELECT id_staf, nama_staf, posisi FROM staf WHERE posisi LIKE '%Attendant%' OR posisi LIKE '%Housekeeping%'")
+    staf = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify({"status": "success", "data": staf})
+
+@app.route('/api/tugaskan-staf', methods=['POST'])
+def tugaskan_staf():
+    data = request.json
+    no_kamar = data.get('nomor_kamar')
+    id_staf = data.get('id_staf')
+    jenis_tugas = data.get('jenis_tugas')
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Cari id_kamar fisik dari nomor kamar visual
+        cursor.execute("SELECT id_kamar FROM kamar WHERE nomor_kamar = %s", (no_kamar,))
+        kamar = cursor.fetchone()
+        
+        if not kamar:
+            return jsonify({"status": "error", "message": "Kamar tidak ditemukan"}), 404
+            
+        cursor.execute("""
+            INSERT INTO jadwal_kebersihan (id_kamar, id_staf, tanggal_tugas, jenis_tugas, status_tugas)
+            VALUES (%s, %s, CURDATE(), %s, 'Menunggu')
+        """, (kamar['id_kamar'], id_staf, jenis_tugas))
+        
+        conn.commit()
+        return jsonify({"status": "success", "message": "Surat tugas kebersihan resmi diterbitkan!"})
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+                
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================

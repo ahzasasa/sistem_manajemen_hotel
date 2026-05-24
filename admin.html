@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin | Hotel Reservasi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="admin.css" rel="stylesheet">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="brand">
+            <h4>HOTEL RESERVASI</h4>
+            <p>ADMIN PORTAL</p>
+        </div>
+        <nav class="nav flex-column mt-3">
+            <a class="nav-link active" href="#" onclick="switchSection('sec-overview', this)"><i class="fa-solid fa-chart-line"></i> Ringkasan Hotel</a>
+            <a class="nav-link" href="#" onclick="switchSection('sec-reservasi', this)"><i class="fa-solid fa-book-bookmark"></i> Hub Reservasi</a>
+            <a class="nav-link" href="#" onclick="switchSection('sec-housekeeping', this)"><i class="fa-solid fa-broom"></i> Housekeeping</a>
+            <a class="nav-link text-warning mt-5" href="login-admin.html"><i class="fa-solid fa-right-from-bracket"></i> Keluar</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="sec-overview" class="admin-section active">
+            <div class="page-header d-flex justify-content-between align-items-center">
+                <h2>Ringkasan Eksekutif & Analitis</h2>
+                <span class="badge bg-secondary p-2"><i class="fa-regular fa-clock"></i> Data Real-Time Hari Ini</span>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card card-stat bg-hotel-green p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6>Tingkat Okupansi</h6>
+                                <h2 id="ov-okupansi">0%</h2>
+                            </div>
+                            <i class="fa-solid fa-hotel fa-2x opacity-50"></i>
+                        </div>
+                        <div class="progress mt-2" style="height: 6px; background: rgba(255,255,255,0.2)">
+                            <div id="ov-okupansi-bar" class="progress-bar bg-white" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card card-stat bg-primary p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6>Kedatangan (Check-In)</h6>
+                                <h2 id="ov-checkin">0</h2>
+                            </div>
+                            <i class="fa-solid fa-door-open fa-2x opacity-50"></i>
+                        </div>
+                        <small class="text-white-50">Dijadwalkan hari ini</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card card-stat bg-hotel-maroon p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6>Keberangkatan (Check-Out)</h6>
+                                <h2 id="ov-checkout">0</h2>
+                            </div>
+                            <i class="fa-solid fa-door-closed fa-2x opacity-50"></i>
+                        </div>
+                        <small class="text-white-50">Tamu selesai menginap</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card card-stat bg-hotel-gold p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6>Pendapatan Hari Ini</h6>
+                                <h3 id="ov-pendapatan" style="font-size: 20px; font-weight: bold; margin: 5px 0;">Rp 0</h3>
+                            </div>
+                            <i class="fa-solid fa-wallet fa-2x opacity-50"></i>
+                        </div>
+                        <small class="text-white-50">Kamar + Layanan Fasilitas</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="table-container">
+                        <h5 class="mb-4"><i class="fa-solid fa-chart-pie text-success"></i> Komposisi Status Pembayaran Invoice</h5>
+                        <div class="row align-items-center text-center">
+                            <div class="col-4 border-end">
+                                <h6 class="text-muted">Paid (Lunas)</h6>
+                                <h4 class="text-success" id="ov-inv-lunas">0</h4>
+                            </div>
+                            <div class="col-4 border-end">
+                                <h6 class="text-muted">Partial (DP 50%)</h6>
+                                <h4 class="text-warning" id="ov-inv-dp">0</h4>
+                            </div>
+                            <div class="col-4">
+                                <h6 class="text-muted">Unpaid (Pending)</h6>
+                                <h4 class="text-danger" id="ov-inv-belum">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="table-container">
+                        <h5 class="mb-3"><i class="fa-solid fa-triangle-exclamation text-warning"></i> Lansiran Operasional</h5>
+                        <ul class="list-group list-group-flush" id="ov-alerts">
+                            <li class="list-group-item text-muted">Sistem berjalan dengan normal tanpa kendala harian.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-reservasi" class="admin-section">
+            <div class="page-header">
+                <h2>Meja Kerja Front Office Hub</h2>
+            </div>
+
+            <div class="table-container">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                            <input type="text" id="search-res" class="form-control" placeholder="Cari Nama Tamu atau ID Reservasi..." onkeyup="filterReservasiTable()">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select id="filter-status-bayar" class="form-select" onchange="filterReservasiTable()">
+                            <option value="">-- Semua Status Pembayaran --</option>
+                            <option value="Lunas">Paid / Lunas</option>
+                            <option value="DP Dibayar">Partial / DP 50%</option>
+                            <option value="Belum Dibayar">Unpaid / Pending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-secondary w-100" onclick="loadAdminData()"><i class="fa-solid fa-rotate"></i> Segarkan Data</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID Reservasi</th>
+                                <th>Nama Tamu</th>
+                                <th>Kamar</th>
+                                <th>Durasi Menginap</th>
+                                <th>Status Tagihan</th>
+                                <th class="text-center">Aksi Resepsionis</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-res-body">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-housekeeping" class="admin-section">
+            <div class="page-header">
+                <h2>Kontrol Manajemen Housekeeping & Jeda Kamar</h2>
+            </div>
+
+            <div class="card p-3 mb-4 border-0 shadow-sm bg-white">
+                <div class="d-flex flex-wrap gap-4 align-items-center justify-content-center">
+                    <div class="d-flex align-items-center gap-2"><span class="badge rm-clean p-2">&nbsp;&nbsp;&nbsp;</span> Bersih / Tersedia</div>
+                    <div class="d-flex align-items-center gap-2"><span class="badge rm-occupied p-2">&nbsp;&nbsp;&nbsp;</span> Sedang Terisi Guest</div>
+                    <div class="d-flex align-items-center gap-2"><span class="badge rm-dirty p-2">&nbsp;&nbsp;&nbsp;</span> Kotor / Jeda Prosedur 24 Jam</div>
+                    <div class="d-flex align-items-center gap-2"><span class="badge rm-repair p-2">&nbsp;&nbsp;&nbsp;</span> Perbaikan (Maintenance)</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="table-container">
+                        <h5 class="mb-3"><i class="fa-solid fa-user-check text-success"></i> Surat Tugas Kebersihan</h5>
+                        <form id="form-tugaskan-staf">
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Nomor Kamar target</label>
+                                <input type="text" id="hk-no-kamar" class="form-control" placeholder="Pilih kamar di peta grid..." readonly required>
+                                <input type="hidden" id="hk-id-kamar">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Delegasikan Ke Staf</label>
+                                <select id="hk-pilih-staf" class="form-select" required>
+                                    <option value="">-- Pilih Staf Tersedia --</option>
+                                    </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Jenis Pemeliharaan</label>
+                                <select id="hk-jenis" class="form-select">
+                                    <option value="Pembersihan Rutin">Pembersihan Rutin</option>
+                                    <option value="Pembersihan Total">Pembersihan Total (Deep Cleaning)</option>
+                                    <option value="Perbaikan">Perbaikan Kerusakan Elektrik/Fisik</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 font-weight-bold"><i class="fa-solid fa-paper-plane"></i> KIRIM SURAT TUGAS</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5><i class="fa-solid fa-grip text-primary"></i> Peta Monitor Fisik Kamar (Representatif)</h5>
+                            <button class="btn btn-sm btn-outline-dark" onclick="simulasiKamarSiap()"><i class="fa-solid fa-circle-check"></i> Paksa Mode Bersih</button>
+                        </div>
+                        <div class="room-grid" id="container-room-grid">
+                            </div>
+                        <small class="text-muted d-block mt-3">* Klik box kamar berkode <strong>Kuning (Kotor)</strong> untuk memasukkannya ke form Penugasan Staf.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
