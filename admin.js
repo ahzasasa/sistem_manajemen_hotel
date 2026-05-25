@@ -1,3 +1,9 @@
+// Cek apakah admin sudah login (menggunakan sessionStorage yang kita set di login.js sebelumnya)
+if (!sessionStorage.getItem('adminName')) {
+    alert("Akses ditolak! Silakan login terlebih dahulu.");
+    window.location.href = 'login.html';
+}
+
 // =========================================================================
 // KONTROL UTAMA & ROUTER INTERFACES
 // =========================================================================
@@ -12,7 +18,12 @@ function switchSection(sectionId, element) {
 document.addEventListener('DOMContentLoaded', function() {
     loadAdminData();
     populateStafDropdown();
-    renderPetaKamarSimulasi();
+    renderPetaKamarAsli();
+
+    const btnTambahHK = document.getElementById('btn-tambah-hk');
+    if (btnTambahHK) {
+        btnTambahHK.addEventListener('click', simpanTugasHousekeeping);
+    }
 });
 
 const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
@@ -42,13 +53,30 @@ function loadAdminData() {
             tbody.innerHTML = '';
             
             data.reservasi.forEach(r => {
+                // Label Pembayaran
                 let badgeStatus = '';
-                if (r.status_pembayaran === 'Lunas') {
-                    badgeStatus = '<span class="badge badge-lunas">PAID / LUNAS</span>';
-                } else if (r.status_pembayaran === 'DP Dibayar') {
-                    badgeStatus = '<span class="badge badge-dp">PARTIAL / DP 50%</span>';
+                if (r.status_pembayaran === 'Lunas') badgeStatus = '<span class="badge badge-lunas">PAID / LUNAS</span>';
+                else if (r.status_pembayaran === 'DP Dibayar') badgeStatus = '<span class="badge badge-dp">PARTIAL / DP 50%</span>';
+                else badgeStatus = '<span class="badge badge-belum">UNPAID / PENDING</span>';
+
+                // Tombol Aksi Dinamis
+                // ... baris kode sebelumnya ...
+                let btnAksi = '';
+                if (r.status_pesanan === 'Menunggu') {
+                    btnAksi = `
+                        <button class="btn btn-sm btn-success btn-action me-1" onclick="prosesReservasi('${r.id_reservasi}', 'Aktif')">
+                            <i class="fa-solid fa-key"></i> Check-In
+                        </button>
+                        <button class="btn btn-sm btn-danger btn-action" onclick="prosesReservasi('${r.id_reservasi}', 'Batal')">Batal</button>
+                    `;
+                } else if (r.status_pesanan === 'Aktif') {
+                    btnAksi = `
+                        <button class="btn btn-sm btn-warning btn-action" onclick="prosesReservasi('${r.id_reservasi}', 'Selesai')">
+                            <i class="fa-solid fa-right-from-bracket"></i> Check-Out
+                        </button>
+                    `;
                 } else {
-                    badgeStatus = '<span class="badge badge-belum">UNPAID / PENDING</span>';
+                    btnAksi = `<span class="badge bg-secondary">${r.status_pesanan}</span>`;
                 }
 
                 tbody.innerHTML += `
@@ -58,9 +86,7 @@ function loadAdminData() {
                         <td><span class="badge bg-secondary">${r.nomor_kamar}</span></td>
                         <td>${r.tanggal_masuk} - ${r.tanggal_keluar}</td>
                         <td>${badgeStatus}</td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-success btn-action me-1"><i class="fa-solid fa-key"></i> Check-In</button>
-                        </td>
+                        <td class="text-center">${btnAksi}</td>
                     </tr>
                 `;
             });
@@ -113,39 +139,70 @@ function populateStafDropdown() {
     });
 }
 
-function renderPetaKamarSimulasi() {
-    const grid = document.getElementById('container-room-grid');
-    grid.innerHTML = '';
+function renderPetaKamarAsli() {
+    fetch('http://127.0.0.1:5000/api/status-kamar')
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const container = document.getElementById('container-room-grid');
+            container.innerHTML = ''; // Bersihkan kontainer lama
 
-    const sampleRooms = [
-        { no: '0301', status: 'rm-clean' }, { no: '0302', status: 'rm-clean' },
-        { no: '0303', status: 'rm-occupied' }, { no: '0325', status: 'rm-repair' },
-        { no: '0401', status: 'rm-clean' }, { no: '0402', status: 'rm-occupied' },
-        { no: '0511', status: 'rm-clean' }, { no: '0901', status: 'rm-clean' },
-        { no: '1401', status: 'rm-dirty' }, { no: '1402', status: 'rm-clean' },
-        { no: '1501', status: 'rm-occupied' }, { no: '1511', status: 'rm-dirty' },
-        { no: '1701', status: 'rm-clean' }, { no: '2201', status: 'rm-clean' },
-        { no: '2501', status: 'rm-occupied' }, { no: '2502', status: 'rm-clean' }
-    ];
+            // Objek untuk mengelompokkan data kamar berdasarkan lantai
+            const roomsByFloor = {};
 
-    sampleRooms.forEach(rm => {
-        let box = document.createElement('div');
-        box.className = `room-box ${rm.status}`;
-        box.innerHTML = `<i class="fa-solid fa-door-closed mb-1"></i> ${rm.no}`;
-        
-        if (rm.status === 'rm-dirty') {
-            box.onclick = function() {
-                document.getElementById('hk-no-kamar').value = rm.no;
-                document.getElementById('hk-id-kamar').value = rm.no;
-                document.getElementById('hk-pilih-staf').focus();
-            };
-        } else {
-            box.onclick = function() {
-                alert(`Kamar ${rm.no} tidak memerlukan tindakan housekeeping.`);
-            };
+            data.data.forEach(rm => {
+                // Ambil 2 karakter pertama dari nomor kamar lalu ubah ke angka (03 -> 3, 14 -> 14)
+                let lantaiStr = rm.nomor_kamar.substring(0, 2);
+                let lantai = parseInt(lantaiStr, 10);
+                
+                if (!roomsByFloor[lantai]) {
+                    roomsByFloor[lantai] = []; // Buat grup baru jika lantai belum ada
+                }
+                roomsByFloor[lantai].push(rm);
+            });
+
+            // Loop untuk menggambar setiap lantai ke layar
+            for (const lantai in roomsByFloor) {
+                // 1. Buat Sekat/Pemisah Lantai
+                let floorHeader = document.createElement('div');
+                floorHeader.className = 'floor-divider';
+                floorHeader.innerHTML = `<i class="fa-solid fa-layer-group"></i> Area Lantai ${lantai}`;
+                container.appendChild(floorHeader);
+
+                // 2. Buat Grid Kamar Khusus untuk Lantai Tersebut
+                let grid = document.createElement('div');
+                grid.className = 'room-grid';
+
+                roomsByFloor[lantai].forEach(rm => {
+                    let box = document.createElement('div');
+                    box.className = `room-box ${rm.status_visual}`;
+                    box.innerHTML = `<i class="fa-solid fa-door-closed mb-1"></i> ${rm.nomor_kamar}`;
+                    
+                    if (rm.status_visual === 'rm-dirty') {
+                        box.onclick = function() {
+                            document.getElementById('hk-no-kamar').value = rm.nomor_kamar;
+                            document.getElementById('hk-id-kamar').value = rm.id_kamar;
+                            document.getElementById('hk-pilih-staf').focus();
+                        };
+                    } else {
+                        box.onclick = function() {
+                            let labelStatus = '';
+                            if (rm.status_visual === 'rm-clean') labelStatus = 'Bersih / Tersedia';
+                            if (rm.status_visual === 'rm-occupied') labelStatus = 'Sedang Terisi Guest';
+                            if (rm.status_visual === 'rm-booked') labelStatus = 'Telah Dipesan (Menunggu Check-In)';
+                            if (rm.status_visual === 'rm-repair') labelStatus = 'Perbaikan (Maintenance)';
+                            alert(`Kamar ${rm.nomor_kamar} saat ini berstatus: ${labelStatus}.`);
+                        };
+                    }
+                    grid.appendChild(box);
+                });
+                
+                // Masukkan grid lantai ini ke dalam kontainer utama
+                container.appendChild(grid);
+            }
         }
-        grid.appendChild(box);
-    });
+    })
+    .catch(err => console.error("Gagal memuat data real-time peta kamar:", err));
 }
 
 // Submit form penugasan staf kebersihan
@@ -185,4 +242,87 @@ function simulasiKamarSiap() {
     document.querySelectorAll('.rm-dirty').forEach(box => {
         box.className = "room-box rm-clean";
     });
+}
+
+
+// Fungsi mengirim perintah ubah status ke Python
+function prosesReservasi(id_reservasi, statusBaru) {
+    if(confirm(`Ubah status pesanan ${id_reservasi} menjadi ${statusBaru}?`)) {
+        fetch('http://127.0.0.1:5000/api/update-reservasi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_reservasi: id_reservasi, status_baru: statusBaru })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                loadAdminData(); // Segarkan tabel otomatis
+                renderPetaKamarAsli(); // Segarkan peta kamar otomatis
+            } else {
+                alert("Gagal: " + data.message);
+            }
+        });
+    }
+}
+
+
+
+// Fungsi untuk memproses penambahan tugas Housekeeping ke database
+function simpanTugasHousekeeping() {
+    // 1. Ambil data dari elemen-elemen form di Gambar 1
+    // Asumsi ID elemen: hk-no-kamar (input), hk-id-kamar (hidden input untuk ID asli), hk-pilih-staf (select), hk-tanggal (input)
+    const idKamar = document.getElementById('hk-id-kamar').value; 
+    const noKamar = document.getElementById('hk-no-kamar').value;
+    const idStaf = document.getElementById('hk-pilih-staf').value;
+    const tanggalTugas = document.getElementById('hk-tanggal').value;
+
+    // Validasi sederhana di sisi klien
+    if (!idStaf) {
+        alert("Mohon pilih staf Housekeeping terlebih dahulu.");
+        return;
+    }
+
+    // Tampilkan konfirmasi
+    if(confirm(`Konfirmasi penugasan untuk Kamar ${noKamar} pada tanggal ${tanggalTugas}?`)) {
+        
+        // Nonaktifkan tombol agar tidak diklik dua kali saat memproses
+        const btn = document.getElementById('btn-tambah-hk'); // Asumsi ID tombol '+ Tambah Tugas'
+        if(btn) { btn.textContent = "MEMPROSES..."; btn.disabled = true; }
+
+        // 2. Siapkan data dalam format JSON
+        const dataPayload = {
+            id_kamar: idKamar,
+            id_staf: idStaf,
+            tanggal_tugas: tanggalTugas,
+            id_reservasi: null // Set NULL sementara untuk pembersihan rutin
+        };
+
+        // 3. Kirim data ke API Python Flask yang baru kita buat
+        fetch('http://127.0.0.1:5000/api/tambah-housekeeping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dataPayload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert(data.message);
+                // Reset form di Gambar 1 agar bersih kembali
+                document.getElementById('hk-id-kamar').value = '';
+                document.getElementById('hk-no-kamar').value = 'Pilih Kamar di Peta';
+                document.getElementById('hk-pilih-staf').value = ''; 
+                // Opsional: Muat ulang data dashboard HK jika ada tabel daftarnya
+            } else {
+                alert("Gagal menyimpan tugas: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error("Koneksi Error:", err);
+            alert("Terjadi kesalahan koneksi ke peladen Python.");
+        })
+        .finally(() => {
+            // Aktifkan kembali tombolnya
+            if(btn) { btn.textContent = "+ Tambah Tugas"; btn.disabled = false; }
+        });
+    }
 }

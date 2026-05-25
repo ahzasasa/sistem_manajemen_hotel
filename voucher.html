@@ -2,268 +2,92 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-Voucher & Invoice Hotel</title>
-    <style>
-        /* Desain Khusus Kertas A4 / Print dengan Tema Hotel Reservasi */
-        body { 
-            font-family: Arial, sans-serif; 
-            background-color: #E6E2DA; 
-            margin: 0; 
-            padding: 30px 20px; 
-        }
-        
-        .voucher-container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 40px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-            border-top: 10px solid #154230; 
-            border-radius: 4px;
-        }
-        
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border-bottom: 2px solid #A6824A; 
-            padding-bottom: 20px; 
-            margin-bottom: 25px; 
-        }
-        
-        .header h1 { 
-            color: #154230; 
-            margin: 0; 
-            font-size: 28px; 
-            letter-spacing: 1px;
-        }
-        
-        .header p { 
-            margin: 5px 0 0 0; 
-            color: #A6824A; 
-            font-weight: bold; 
-            letter-spacing: 2px;
-            font-size: 14px;
-        }
-        
-        .status-box { text-align: right; }
-        
-        .status-badge { 
-            color: #154230; 
-            font-weight: bold; 
-            font-size: 18px; 
-            text-transform: uppercase; 
-            border: 2px solid #154230; 
-            padding: 6px 12px; 
-            border-radius: 4px; 
-            display: inline-block;
-        }
-        
-        table { width: 100%; border-collapse: collapse; margin-bottom: 35px; }
-        td { padding: 12px 0; border-bottom: 1px solid #E6E2DA; vertical-align: top; color: #101111; }
-        .col-label { font-weight: bold; width: 35%; color: #666; }
-        
-        .section-title { 
-            background-color: #154230; 
-            color: white; 
-            padding: 10px 15px; 
-            font-weight: bold; 
-            margin-bottom: 15px; 
-            border-left: 6px solid #A6824A; 
-            letter-spacing: 1px;
-        }
-        
-        .print-btn { 
-            display: block; 
-            width: 100%; 
-            text-align: center; 
-            background: #5D1E21; 
-            color: white; 
-            padding: 15px; 
-            text-decoration: none; 
-            font-weight: bold; 
-            margin-top: 15px; 
-            border: none; 
-            cursor: pointer;
-            font-size: 16px;
-            border-radius: 4px;
-            transition: background 0.3s;
-        }
-        
-        .print-btn:hover { background: #3d1315; }
-        
-        #v-total { color: #5D1E21; font-weight: bold; font-size: 22px; }
-
-        @media print {
-            body { background: white; padding: 0; }
-            .voucher-container { box-shadow: none; padding: 0; border-top: none; }
-            .print-btn, #btn-bayar-sekarang { display: none !important; }
-        }
-    </style>
+    <link href="voucher.css" rel="stylesheet">
 </head>
 <body>
 
-<div class="voucher-container">
-    <div class="header">
-        <div>
-            <h1>HOTEL RESERVASI</h1>
-            <p>OFFICIAL INVOICE & E-VOUCHER</p>
+    <div class="voucher-container" id="voucher-content" style="display: none;">
+        
+        <div class="header">
+            <div class="header-left">
+                <h1>HOTEL RESERVASI</h1>
+                <p>OFFICIAL INVOICE & E-VOUCHER</p>
+            </div>
+            <div class="header-right">
+                <div class="status-badge" id="v-status">MEMUAT...</div>
+                <div class="id-reservasi">ID Reservasi: <strong id="v-id"></strong></div>
+            </div>
         </div>
-        <div class="status-box">
-            <div id="v-status" class="status-badge">MEMUAT...</div>
-            <div style="font-size: 12px; color: #666; margin-top: 8px;">ID Reservasi: <strong id="v-order-id" style="color: #101111;">-</strong></div>
+
+        <table>
+            <tr>
+                <td>Nama Tamu</td>
+                <td id="v-nama"></td>
+            </tr>
+            <tr>
+                <td>Nomor Telepon</td>
+                <td id="v-telepon"></td>
+            </tr>
+        </table>
+
+        <div class="section-title">DETAIL HOTEL</div>
+        <table>
+            <tr>
+                <td>Tipe Kamar</td>
+                <td id="v-tipe"></td>
+            </tr>
+            <tr>
+                <td>Tanggal Masuk (Check-in)</td>
+                <td id="v-checkin"></td>
+            </tr>
+            <tr>
+                <td>Tanggal Keluar (Check-out)</td>
+                <td id="v-checkout"></td>
+            </tr>
+            <tr>
+                <td>Nomor Kamar</td>
+                <td style="font-weight: bold; color: #154230;" id="v-nokamar"></td>
+            </tr>
+        </table>
+
+        <div class="section-title">DETAIL PEMBAYARAN</div>
+        <table>
+            <tr>
+                <td>Metode Pembayaran</td>
+                <td id="v-metode"></td>
+            </tr>
+            <tr class="total-row">
+                <td>Total Tagihan</td>
+                <td id="v-total"></td>
+            </tr>
+        </table>
+
+        <div class="notes">
+            <strong>Catatan Penting:</strong><br>
+            * Mohon tunjukkan e-voucher ini beserta kartu identitas resmi (KTP/Paspor) Anda saat melakukan Check-in di resepsionis.<br>
+            * Pembatalan gratis dapat dilakukan maksimal 6 jam sebelum waktu Check-in.
         </div>
+
+        <div class="action-container">
+            
+            <div id="opsi-bayar-container" class="opsi-bayar-box" style="display: none;">
+                <label>Pilihan Pembayaran:</label>
+                <select id="pilihan-bayar">
+                    <option value="Lunas">Bayar Lunas Penuh (100%)</option>
+                    <option value="DP Dibayar">Bayar Uang Muka / DP (50%)</option>
+                </select>
+            </div>
+
+            <button id="btn-bayar-sekarang" class="btn btn-bayar" style="display: none;">💳 PROSES PEMBAYARAN</button>
+            <button id="btn-batal-pesanan" class="btn btn-batal" style="display: none;">❌ BATALKAN PESANAN</button>
+            <button class="btn btn-print" onclick="window.print()">🖨️ SIMPAN SEBAGAI PDF</button>
+
+        </div>
+
     </div>
 
-    <table>
-        <tr>
-            <td class="col-label">Nama Tamu</td>
-            <td id="v-nama" style="font-weight: bold; font-size: 18px;">-</td>
-        </tr>
-        <tr>
-            <td class="col-label">Nomor Telepon</td>
-            <td id="v-telepon">-</td>
-        </tr>
-    </table>
-
-    <div class="section-title">DETAIL HOTEL</div>
-    <table>
-        <tr>
-            <td class="col-label">Tipe Kamar</td>
-            <td id="v-tipe-kamar" style="font-weight: bold;">-</td>
-        </tr>
-        <tr>
-            <td class="col-label">Tanggal Masuk (Check-in)</td>
-            <td id="v-checkin">-</td>
-        </tr>
-        <tr>
-            <td class="col-label">Tanggal Keluar (Check-out)</td>
-            <td id="v-checkout">-</td>
-        </tr>
-        <tr>
-            <td class="col-label">Nomor Kamar</td>
-            <td style="font-weight: bold; font-size: 18px; color: #154230;" id="v-no-kamar">-</td>
-        </tr>
-    </table>
-
-    <div class="section-title">DETAIL PEMBAYARAN</div>
-    <table>
-        <tr>
-            <td class="col-label">Metode Pembayaran</td>
-            <td id="v-metode" style="font-weight: bold;">-</td>
-        </tr>
-        <tr>
-            <td class="col-label">Total Tagihan</td>
-            <td id="v-total">-</td>
-        </tr>
-        <tr id="row-transaksi" style="display: none;">
-            <td class="col-label">ID Transaksi (Referensi)</td>
-            <td id="v-transaksi" style="font-weight: bold; color: #154230; font-family: monospace; font-size: 16px;">-</td>
-        </tr>
-    </table>
-
-    <div style="margin-top: 40px; font-size: 13px; color: #666; line-height: 1.5; border-top: 1px dashed #ccc; padding-top: 20px;">
-        <strong>Catatan Penting:</strong><br>
-        * Mohon tunjukkan e-voucher ini beserta kartu identitas resmi (KTP/Paspor) Anda saat melakukan Check-in di resepsionis.<br>
-        * Waktu Check-in standar adalah pukul 14:00 waktu setempat, dan Check-out pukul 12:00.
-    </div>
-
-    <button id="btn-bayar-sekarang" style="display: none; width: 100%; background: #154230; color: white; padding: 15px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.3s;">💳 SIMULASI BAYAR SEKARANG</button>
-
-    <button class="print-btn" onclick="window.print()">🖨️ CETAK SEBAGAI PDF</button>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const id = urlParams.get('id');
-        const email = urlParams.get('email');
-
-        if(id && email) {
-            fetch(`http://127.0.0.1:5000/api/cek-pesanan?id=${id}&email=${email}`)
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    const p = data.data;
-                    document.getElementById('v-order-id').textContent = p.id_reservasi;
-                    document.getElementById('v-nama').textContent = p.nama_lengkap;
-                    document.getElementById('v-telepon').textContent = p.nomor_telepon;
-                    document.getElementById('v-tipe-kamar').textContent = p.nama_tipe;
-                    
-                    const opsiWaktu = { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' };
-                    document.getElementById('v-checkin').textContent = new Date(p.tanggal_masuk).toLocaleString('id-ID', opsiWaktu).replace('.', ':') + ' WIB';
-                    document.getElementById('v-checkout').textContent = new Date(p.tanggal_keluar).toLocaleString('id-ID', opsiWaktu).replace('.', ':') + ' WIB';
-                    
-                    document.getElementById('v-no-kamar').textContent = p.nomor_kamar;
-                    document.getElementById('v-metode').textContent = p.metode_pembayaran || 'Transfer Bank';
-                    document.getElementById('v-total').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(p.harga_terkunci);
-
-                    // LOGIKA MENAMPILKAN ID TRANSAKSI JIKA ADA
-                    if (p.referensi_transaksi) {
-                        document.getElementById('row-transaksi').style.display = 'table-row';
-                        document.getElementById('v-transaksi').textContent = p.referensi_transaksi;
-                    } else {
-                        document.getElementById('row-transaksi').style.display = 'none';
-                    }
-
-                    // Logika Status Pembayaran (Dari Tabel Invoice)
-                    const statusBadge = document.getElementById('v-status');
-                    if (p.status_pembayaran === 'Lunas') {
-                        statusBadge.textContent = 'PAID / LUNAS';
-                        statusBadge.style.borderColor = '#154230';
-                        statusBadge.style.color = '#154230';
-                    } else if (p.status_pembayaran === 'DP Dibayar') {
-                        statusBadge.textContent = 'PARTIAL / DP 50%';
-                        statusBadge.style.borderColor = '#A6824A';
-                        statusBadge.style.color = '#A6824A';
-                    } else {
-                        statusBadge.textContent = 'UNPAID / PENDING';
-                        statusBadge.style.borderColor = '#5D1E21';
-                        statusBadge.style.color = '#5D1E21';
-                    }
-
-                    // Fitur Tombol Bayar
-                    const btnBayar = document.getElementById('btn-bayar-sekarang');
-                    if (p.status_pembayaran !== 'Lunas') {
-                        btnBayar.style.display = 'block';
-                        btnBayar.onclick = function() {
-                            btnBayar.textContent = "MEMPROSES TRANSAKSI...";
-                            btnBayar.disabled = true;
-                            btnBayar.style.background = "#A6824A";
-
-                            fetch('http://127.0.0.1:5000/api/bayar-pesanan', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    id_reservasi: p.id_reservasi,
-                                    nominal: p.harga_terkunci,
-                                    metode: p.metode_pembayaran
-                                })
-                            })
-                            .then(res => res.json())
-                            .then(dataBayar => {
-                                if (dataBayar.status === 'success') {
-                                    alert('Pembayaran Berhasil Diterima!');
-                                    window.location.reload();
-                                } else {
-                                    alert('Pembayaran Gagal: ' + dataBayar.message);
-                                    btnBayar.textContent = "💳 SIMULASI BAYAR SEKARANG";
-                                    btnBayar.disabled = false;
-                                    btnBayar.style.background = "#154230";
-                                }
-                            });
-                        };
-                    } else {
-                        btnBayar.style.display = 'none';
-                    }
-
-                } else {
-                    alert('Data pesanan tidak ditemukan!');
-                }
-            })
-            .catch(err => console.error(err));
-        }
-    });
-</script>
+    <script src="voucher.js"></script>
 </body>
 </html>

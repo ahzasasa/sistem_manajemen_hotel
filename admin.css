@@ -119,12 +119,20 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
     gap: 10px;
-    max-height: 320px;
-    overflow-y: auto;
-    padding: 10px;
-    background: #fff;
-    border-radius: 8px;
-    border: 1px solid var(--hotel-beige);
+    padding: 10px 0;
+    /* Hapus max-height dan overflow agar tampil full */
+}
+
+/* Desain Pemisah/Sekat Antar Lantai */
+.floor-divider {
+    background-color: #f8f9fa;
+    padding: 8px 15px;
+    margin: 20px 0 10px 0;
+    border-left: 4px solid var(--hotel-gold);
+    font-weight: bold;
+    color: var(--hotel-green);
+    border-radius: 4px;
+    font-size: 15px;
 }
 
 .room-box {
@@ -145,7 +153,8 @@ body {
 
 /* Warna Status Kamar */
 .rm-clean { background-color: #198754; }       /* Hijau - Bersih */
-.rm-occupied { background-color: #0d6efd; }    /* Biru - Terisi */
+.rm-occupied { background-color: #0d6efd; }    /* Biru - Terisi (Check-In) */
+.rm-booked { background-color: #6f42c1; }      /* Ungu - Dipesan (Belum Check-In) */
 .rm-dirty { background-color: #ffc107; color: #000; } /* Kuning - Kotor */
 .rm-repair { background-color: #6c757d; }      /* Abu-abu - Perbaikan */
 

@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from datetime import datetime
 import mysql.connector
 from flask_cors import CORS
+from datetime import timedelta
 
 app = Flask(__name__)
 # Mengaktifkan CORS agar frontend (HTML/JS) diizinkan mengambil data dari backend Python
@@ -160,12 +161,12 @@ def buat_pesanan():
         checkin_dt = datetime.strptime(data['checkin'], '%Y-%m-%dT%H:%M')
         checkout_dt = datetime.strptime(data['checkout'], '%Y-%m-%dT%H:%M')
         
-        # 1. Cek Ketersediaan Kamar (Cari 1 kamar kosong untuk tipe yang dipilih)
-# UBAH QUERY: Tambahkan logika filter jeda 24 jam
+        # 1. Cek Ketersediaan Kamar (Cari 1 kamar kosong dan tidak diperbaiki untuk tipe yang dipilih)
         query_kamar = """
             SELECT k.id_kamar, k.nomor_kamar 
             FROM kamar k
             WHERE k.id_tipe = %s 
+            AND k.status_kondisi = 'Baik'  -- <=== INI BARIS PELINDUNG BARUNYA
             AND k.id_kamar NOT IN (
                 -- 1. Kamar yang sudah dipesan untuk tanggal yang diminta
                 SELECT dr.id_kamar FROM detail_reservasi dr
@@ -183,7 +184,7 @@ def buat_pesanan():
                 AND r.tanggal_keluar > DATE_SUB(%s, INTERVAL 24 HOUR)
             ) LIMIT 1
         """
-        # Kita masukkan parameter checkout_dt sebanyak 2 kali untuk filter ke-2
+        
         cursor.execute(query_kamar, (data['id_tipe'], checkout_dt, checkin_dt, checkin_dt, checkin_dt))
         kamar_tersedia = cursor.fetchone()
 
@@ -228,11 +229,10 @@ def buat_pesanan():
 
         # 4. Simpan ke Tabel reservasi (Data Utama)
         cursor.execute("""
-            INSERT INTO reservasi (id_reservasi, id_tamu, tanggal_masuk, tanggal_keluar, status_pesanan, metode_pembayaran) 
-            VALUES (%s, %s, %s, %s, 'Dikonfirmasi', %s)
-        """, (id_reservasi, id_tamu, checkin_dt, checkout_dt, data['metode_pembayaran']))
+            INSERT INTO reservasi (id_reservasi, id_tamu, tanggal_masuk, tanggal_keluar, status_pesanan) 
+            VALUES (%s, %s, %s, %s, %s) 
+        """, (id_reservasi, id_tamu, checkin_dt, checkout_dt, 'Menunggu')) 
 
-        # 5. Simpan ke Tabel detail_reservasi (Kunci Harga & Kamar)
         cursor.execute("""
             INSERT INTO detail_reservasi (id_reservasi, id_kamar, harga_terkunci) 
             VALUES (%s, %s, %s)
@@ -465,7 +465,11 @@ def admin_dashboard():
         checkout_hari_ini = cursor.fetchone()['checkout']
 
         # 3. Pendapatan Hari Ini
-        cursor.execute("SELECT SUM(nominal) as total_pendapatan FROM pembayaran WHERE DATE(tanggal_bayar) = DATE(NOW())")
+        cursor.execute("""
+            SELECT SUM(total_bersih) as total_pendapatan 
+            FROM invoice 
+            WHERE status_pembayaran = 'Lunas'
+        """)
         pend_hari_ini = cursor.fetchone()['total_pendapatan']
         pendapatan_hari_ini = pend_hari_ini if pend_hari_ini else 0
 
@@ -478,13 +482,19 @@ def admin_dashboard():
 
         # 5. Daftar Reservasi (Untuk Tabel Meja Kerja)
         cursor.execute("""
-            SELECT r.id_reservasi, t.nama_lengkap, k.nomor_kamar, r.tanggal_masuk, r.tanggal_keluar, i.status_pembayaran 
+            SELECT r.id_reservasi, 
+                   t.nama_lengkap,    # <--- HAPUS tulisan 'as nama_tamu' di sini
+                   k.nomor_kamar, 
+                   r.tanggal_masuk, 
+                   r.tanggal_keluar, 
+                   IFNULL(i.status_pembayaran, 'Belum Dibayar') as status_pembayaran, 
+                   r.status_pesanan
             FROM reservasi r
-            JOIN tamu t ON r.id_tamu = t.id_tamu
-            JOIN detail_reservasi d ON r.id_reservasi = d.id_reservasi
-            JOIN kamar k ON d.id_kamar = k.id_kamar
-            JOIN invoice i ON r.id_reservasi = i.id_reservasi
-            ORDER BY r.tanggal_masuk DESC LIMIT 50
+            LEFT JOIN tamu t ON r.id_tamu = t.id_tamu
+            LEFT JOIN detail_reservasi dr ON r.id_reservasi = dr.id_reservasi
+            LEFT JOIN kamar k ON dr.id_kamar = k.id_kamar
+            LEFT JOIN invoice i ON r.id_reservasi = i.id_reservasi
+            ORDER BY r.tanggal_masuk DESC
         """)
         daftar_reservasi = cursor.fetchall()
 
@@ -554,7 +564,257 @@ def tugaskan_staf():
         if conn: conn.close()
         
         
-                
+# ==========================================
+# ENDPOINT LOGIN ADMIN
+# ==========================================
+@app.route('/api/login-admin', methods=['POST'])
+def login_admin():
+    data = request.json
+    username_input = data.get('username')
+    password_input = data.get('password')
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Cari data admin berdasarkan username dan password
+        cursor.execute("SELECT nama_lengkap, role FROM akun_admin WHERE username = %s AND password = %s", (username_input, password_input))
+        admin = cursor.fetchone()
+        
+        if admin:
+            # Jika cocok, izinkan masuk
+            return jsonify({
+                "status": "success", 
+                "message": "Akses Diberikan",
+                "nama": admin['nama_lengkap'],
+                "role": admin['role']
+            })
+        else:
+            # Jika tidak ada yang cocok, tolak
+            return jsonify({"status": "error", "message": "Username atau Password salah!"}), 401
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+
+@app.route('/api/status-kamar', methods=['GET'])
+def get_status_kamar():
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Query cerdas untuk mengklasifikasikan status visual kamar secara real-time
+        query = """
+            SELECT 
+                k.id_kamar, 
+                k.nomor_kamar,
+                CASE 
+                    -- 1. Kondisi Fisik Rusak
+                    WHEN k.status_kondisi = 'Perbaikan' THEN 'rm-repair'
+                    
+                    -- 2. Sedang Dihuni (Tamu sudah Check-In)
+                    WHEN EXISTS (
+                        SELECT 1 FROM detail_reservasi dr
+                        JOIN reservasi r ON dr.id_reservasi = r.id_reservasi
+                        WHERE dr.id_kamar = k.id_kamar 
+                        AND r.status_pesanan = 'Aktif'
+                    ) THEN 'rm-occupied'
+
+                    -- 3. Sudah Dipesan tapi Belum Check-In (Status: Menunggu)
+                    WHEN EXISTS (
+                        SELECT 1 FROM detail_reservasi dr
+                        JOIN reservasi r ON dr.id_reservasi = r.id_reservasi
+                        WHERE dr.id_kamar = k.id_kamar 
+                        AND r.status_pesanan = 'Menunggu'
+                    ) THEN 'rm-booked'
+                    
+                    -- 4. Jeda Prosedur 24 Jam setelah Check-Out
+                    WHEN EXISTS (
+                        SELECT 1 FROM detail_reservasi dr
+                        JOIN reservasi r ON dr.id_reservasi = r.id_reservasi
+                        WHERE dr.id_kamar = k.id_kamar 
+                        AND r.status_pesanan = 'Selesai' 
+                        AND r.tanggal_keluar > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                    ) THEN 'rm-dirty'
+                    
+                    -- 5. Bersih dan Tersedia
+                    ELSE 'rm-clean'
+                END as status_visual
+            FROM kamar k
+            ORDER BY k.nomor_kamar ASC
+        """
+        cursor.execute(query)
+        kamar_list = cursor.fetchall()
+        return jsonify({"status": "success", "data": kamar_list})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+# ==========================================
+# ENDPOINT UPDATE STATUS RESERVASI
+# ==========================================
+@app.route('/api/update-reservasi', methods=['POST'])
+def update_reservasi():
+    data = request.json
+    id_res = data.get('id_reservasi')
+    status_baru = data.get('status_baru')
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Perbarui status di tabel reservasi
+        cursor.execute("UPDATE reservasi SET status_pesanan = %s WHERE id_reservasi = %s", (status_baru, id_res))
+        conn.commit()
+        
+        return jsonify({"status": "success", "message": f"Status berhasil diubah menjadi {status_baru}"})
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+
+# ==========================================
+# ENDPOINT PEMBATALAN OLEH TAMU
+# ==========================================
+@app.route('/api/user-batal', methods=['POST'])
+def user_batal():
+    data = request.json
+    id_res = data.get('id_reservasi')
+    email = data.get('email')
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Cari reservasi berdasarkan ID dan Email untuk keamanan
+        cursor.execute("""
+            SELECT r.status_pesanan, r.tanggal_masuk 
+            FROM reservasi r
+            JOIN tamu t ON r.id_tamu = t.id_tamu
+            WHERE r.id_reservasi = %s AND t.email = %s
+        """, (id_res, email))
+        
+        pesanan = cursor.fetchone()
+        
+        if not pesanan:
+            return jsonify({"status": "error", "message": "Pesanan tidak valid atau email tidak cocok."}), 404
+            
+        if pesanan['status_pesanan'] == 'Batal':
+            return jsonify({"status": "error", "message": "Pesanan ini sudah dibatalkan sebelumnya."}), 400
+            
+        # Cek Aturan 24 Jam sebelum waktu Check-in (asumsi jam 14:00)
+        waktu_sekarang = datetime.now()
+        waktu_checkin = pesanan['tanggal_masuk'] # ini format datetime dari MySQL
+        
+        # Hitung batas maksimal batal (H-1 jam 14:00)
+        batas_batal = waktu_checkin - timedelta(hours=6)
+        
+        if waktu_sekarang > batas_batal:
+            return jsonify({"status": "error", "message": "Batas waktu pembatalan gratis telah lewat (maksimal 6 jam sebelum check-in)."}), 400
+            
+        # Jika lolos syarat, batalkan pesanan
+        cursor.execute("UPDATE reservasi SET status_pesanan = 'Batal' WHERE id_reservasi = %s", (id_res,))
+        conn.commit()
+        
+        return jsonify({"status": "success", "message": "Pesanan berhasil dibatalkan. Jika Anda sudah melakukan pembayaran, hubungi Resepsionis untuk proses Refund."})
+        
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+
+# ==========================================
+# ENDPOINT PROSES PEMBAYARAN TAMU
+# ==========================================
+@app.route('/api/proses-bayar', methods=['POST'])
+def proses_bayar():
+    data = request.json
+    id_res = data.get('id_reservasi')
+    status_bayar = data.get('status_pembayaran') 
+    
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("UPDATE invoice SET status_pembayaran = %s WHERE id_reservasi = %s", (status_bayar, id_res))
+        conn.commit()
+        
+        return jsonify({"status": "success", "message": "Pembayaran berhasil diverifikasi!"})
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+    
+    
+# ==========================================
+# ENDPOINT: TAMBAH TUGAS HOUSEKEEPING (HK)
+# ==========================================
+@app.route('/api/tambah-housekeeping', methods=['POST'])
+def tambah_housekeeping():
+    data = request.json
+    id_kamar = data.get('id_kamar')
+    id_staf = data.get('id_staf')
+    tanggal_tugas = data.get('tanggal_tugas')
+    # id_reservasi bisa NULL jika pembersihan rutin, jadi kita amankan
+    id_reservasi = data.get('id_reservasi') 
+
+    # Validasi dasar: pastikan data penting tidak kosong
+    if not id_kamar or not id_staf or not tanggal_tugas:
+        return jsonify({"status": "error", "message": "Data Kamar, Staf, atau Tanggal tidak boleh kosong."}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Perhatikan Gambar 2: Struktur tabel memiliki id_reservasi yang bisa kosong.
+        # Kita gunakan query INSERT: status_kerja otomatis di-set default 'Menunggu'
+        query = """
+            INSERT INTO housekeeping (id_kamar, id_staf, id_reservasi, tanggal_tugas, status_kerja)
+            VALUES (%s, %s, %s, %s, 'Menunggu')
+        """
+        # Execute query dengan parameter yang aman
+        cursor.execute(query, (id_kamar, id_staf, id_reservasi, tanggal_tugas))
+        
+        # Simpan perubahan permanen ke database
+        conn.commit()
+        
+        return jsonify({"status": "success", "message": "Tugas Housekeeping berhasil ditambahkan!"})
+    except Exception as e:
+        if conn: conn.rollback() # Batalkan jika gagal
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+                                                
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================
