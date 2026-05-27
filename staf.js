@@ -352,3 +352,66 @@ function cetakGaji(periode) {
         showConfirmButton: false
     });
 }
+
+
+// ==========================================
+// FUNGSI PENGAJUAN IZIN / SAKIT (DIPISAH)
+// ==========================================
+async function laporAbsen(tipe) {
+    // 1. Sesuaikan pesan dan warna berdasarkan tipe yang diklik
+    let pesanTeks = '';
+    let warnaTombol = '';
+    
+    if (tipe === 'Sakit') {
+        pesanTeks = 'Apakah Anda yakin ingin melapor Sakit hari ini? Bukti surat keterangan dokter wajib diserahkan ke HRD saat Anda kembali bekerja.';
+        warnaTombol = '#ffc107'; // Kuning
+    } else {
+        pesanTeks = 'Apakah Anda yakin ingin mengajukan Izin/Cuti hari ini? Pastikan Anda sudah berkoordinasi dengan atasan divisi Anda.';
+        warnaTombol = '#0dcaf0'; // Biru Info
+    }
+
+    // 2. Munculkan Pop-up Konfirmasi Langsung
+    const result = await Swal.fire({
+        title: `Konfirmasi Lapor ${tipe}`,
+        text: pesanTeks,
+        icon: tipe === 'Sakit' ? 'warning' : 'info',
+        showCancelButton: true,
+        confirmButtonColor: warnaTombol,
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `Ya, Lapor ${tipe}`,
+        cancelButtonText: 'Batal'
+    });
+
+    // 3. Jika user menekan "Ya"
+    if (result.isConfirmed) {
+        try {
+            const response = await fetch('http://127.0.0.1:5000/api/izin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id_staf: idStafAktif, 
+                    status: tipe // Mengirim string 'Sakit' atau 'Izin' ke Python
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                Swal.fire('Laporan Terkirim!', data.message, 'success');
+                
+                // Kunci semua tombol agar tidak bisa diabsen ganda
+                document.getElementById('btn-masuk').disabled = true;
+                document.getElementById('btn-pulang').disabled = true;
+                document.getElementById('btn-sakit').disabled = true;
+                document.getElementById('btn-izin').disabled = true;
+                
+                // Perbarui tabel Riwayat Presensi
+                muatRiwayatPresensi();
+            } else {
+                Swal.fire('Gagal!', data.message, 'error');
+            }
+        } catch (error) {
+            Swal.fire('Error!', 'Koneksi ke server database gagal.', 'error');
+        }
+    }
+}

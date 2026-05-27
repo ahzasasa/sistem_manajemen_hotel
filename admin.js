@@ -480,10 +480,11 @@ function simpanTugasHousekeeping() {
 }
 
 // ==========================================
-// FUNGSI MEMUAT DAFTAR KARYAWAN
+// FUNGSI MEMUAT DAFTAR KARYAWAN (FULL WIDTH)
 // ==========================================
 async function muatDaftarStaf() {
     const tbody = document.getElementById('table-karyawan-body');
+    const labelTotal = document.getElementById('total-staf');
     if (!tbody) return;
 
     try {
@@ -491,27 +492,51 @@ async function muatDaftarStaf() {
         const result = await response.json();
 
         if (result.status === 'success') {
-            tbody.innerHTML = ''; // Kosongkan tulisan "Menghubungkan..."
+            tbody.innerHTML = ''; 
+            if(labelTotal) labelTotal.innerText = result.data.length;
 
             if (result.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-muted py-4">Belum ada data staf di database.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Belum ada data.</td></tr>';
                 return;
             }
 
-            // Cetak data satu per satu
             result.data.forEach(staf => {
+                // 1. Buat Email buatan dari Username
+                const emailPerusahaan = `${staf.username}@hotelreservasi.com`;
+                
+                // 2. Format Waktu
+                const jamMasuk = staf.waktu_masuk ? `<span class="fw-bold text-success">${staf.waktu_masuk}</span>` : '<span class="text-muted">-</span>';
+                const jamPulang = staf.waktu_pulang ? `<span class="fw-bold text-danger">${staf.waktu_pulang}</span>` : '<span class="text-muted">-</span>';
+                
+                // 3. Desain Lencana Status
+                let badgeStatus = '<span class="badge bg-light text-secondary border">Belum Hadir</span>';
+                if (staf.status === 'Hadir') badgeStatus = '<span class="badge bg-success">Hadir</span>';
+                else if (staf.status === 'Sakit') badgeStatus = '<span class="badge bg-warning text-dark">Sakit</span>';
+                else if (staf.status === 'Izin') badgeStatus = '<span class="badge bg-info text-dark">Izin</span>';
+                else if (staf.status === 'Mangkir') badgeStatus = '<span class="badge bg-danger">Mangkir</span>';
+
+                // 4. Susun Baris Tabel
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="fw-bold text-primary">${staf.kode_staf || '-'}</td>
-                    <td class="text-start">${staf.nama_staf}</td>
-                    <td><span class="badge bg-secondary">${staf.nama_posisi}</span></td>
-                    <td>${staf.nomor_telepon}</td>
+                    <td class="ps-4 fw-bold text-muted">${staf.kode_staf || '-'}</td>
+                    <td>
+                        <div class="fw-bold text-dark">${staf.nama_staf}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">${emailPerusahaan}</div>
+                    </td>
+                    <td><span class="badge border border-secondary text-secondary">${staf.nama_posisi}</span></td>
+                    <td>${jamMasuk}</td>
+                    <td>${jamPulang}</td>
+                    <td>${badgeStatus}</td>
+                    <td class="pe-4 text-end">
+                        <button class="btn btn-sm btn-light text-primary me-1" title="Edit Data"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-light text-danger" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
     } catch (error) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-danger py-4">Gagal terhubung ke server database.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Gagal terhubung ke database.</td></tr>';
     }
 }
 

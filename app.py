@@ -1204,7 +1204,6 @@ def get_slip_gaji(id_staf):
 # ==========================================
 # ENDPOINT MANAJEMEN STAF (ADMIN PORTAL)
 # ==========================================
-
 @app.route('/api/staf', methods=['GET'])
 def get_semua_staf():
     conn = None; cursor = None
@@ -1212,11 +1211,19 @@ def get_semua_staf():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Ambil semua staf beserta nama posisinya, urutkan berdasarkan Divisi
+        # Tarik data staf sekaligus data kehadiran mereka HARI INI
         cursor.execute("""
-            SELECT s.kode_staf, s.nama_staf, p.nama_posisi, s.nomor_telepon 
+            SELECT 
+                s.kode_staf, 
+                s.nama_staf, 
+                s.username, 
+                p.nama_posisi, 
+                TIME_FORMAT(pr.waktu_masuk, '%H:%i') as waktu_masuk, 
+                TIME_FORMAT(pr.waktu_pulang, '%H:%i') as waktu_pulang, 
+                pr.status
             FROM staf s
             JOIN posisi p ON s.id_posisi = p.id_posisi
+            LEFT JOIN presensi pr ON s.id_staf = pr.id_staf AND pr.tanggal = CURDATE()
             ORDER BY p.id_posisi ASC, s.nama_staf ASC
         """)
         
@@ -1226,8 +1233,48 @@ def get_semua_staf():
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor: cursor.close()
-        if conn: conn.close()       
-                                                                         
+        if conn: conn.close()     
+
+
+
+# ==========================================
+# ENDPOINT PENGAJUAN IZIN / SAKIT
+# ==========================================
+@app.route('/api/izin', methods=['POST'])
+def ajukan_izin():
+    data = request.json
+    id_staf = data.get('id_staf')
+    status_izin = data.get('status') # Berisi 'Izin' atau 'Sakit'
+    
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Cek apakah staf sudah terlanjur Clock-In atau sudah lapor hari ini
+        cursor.execute("SELECT * FROM presensi WHERE id_staf = %s AND tanggal = CURDATE()", (id_staf,))
+        absen_hari_ini = cursor.fetchone()
+        
+        if absen_hari_ini:
+            return jsonify({"status": "error", "message": "Anda sudah memiliki catatan kehadiran/izin hari ini."})
+            
+        # Masukkan data ke database dengan status Izin/Sakit
+        cursor.execute("""
+            INSERT INTO presensi (id_staf, tanggal, status) 
+            VALUES (%s, CURDATE(), %s)
+        """, (id_staf, status_izin))
+        
+        conn.commit()
+        return jsonify({"status": "success", "message": f"Status {status_izin} Anda berhasil dicatat."})
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+                                                                                 
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================
