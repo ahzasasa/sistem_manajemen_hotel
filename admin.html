@@ -19,6 +19,9 @@
             <a class="nav-link active" href="#" onclick="switchSection('sec-overview', this)"><i class="fa-solid fa-chart-line"></i> Ringkasan Hotel</a>
             <a class="nav-link" href="#" onclick="switchSection('sec-reservasi', this)"><i class="fa-solid fa-book-bookmark"></i> Hub Reservasi</a>
             <a class="nav-link" href="#" onclick="switchSection('sec-housekeeping', this)"><i class="fa-solid fa-broom"></i> Housekeeping</a>
+            
+            <a class="nav-link" href="#" onclick="switchSection('sec-staf', this)"><i class="fa-solid fa-users-gear"></i> Manajemen Staf</a>
+            
             <a class="nav-link text-warning mt-5" href="login.html"><i class="fa-solid fa-right-from-bracket"></i> Keluar</a>
         </nav>
     </div>
@@ -199,7 +202,7 @@
                                     <option value="Perbaikan">Perbaikan Kerusakan Elektrik/Fisik</option>
                                 </select>
                             </div>
-                            <button type="submit" class="btn btn-success w-100 font-weight-bold"><i class="fa-solid fa-paper-plane"></i>KIRIM SURAT TUGAS</button>
+                            <button type="submit" class="btn btn-success w-100 font-weight-bold"><i class="fa-solid fa-paper-plane"></i> KIRIM SURAT TUGAS</button>
                         </form>
                     </div>
                 </div>
@@ -211,15 +214,84 @@
                             <button class="btn btn-sm btn-outline-dark" onclick="simulasiKamarSiap()"><i class="fa-solid fa-circle-check"></i> Paksa Mode Bersih</button>
                         </div>
                         <div id="container-room-grid">
-                        </div>
+                            </div>
                         <small class="text-muted d-block mt-3">* Klik box kamar berkode <strong>Kuning (Kotor)</strong> untuk memasukkannya ke form Penugasan Staf.</small>
                     </div>
                 </div>
             </div>
         </div>
 
-    </div>
+        <div id="sec-staf" class="admin-section">
+            <div class="page-header">
+                <h2>Manajemen Staf & Karyawan</h2>
+            </div>
 
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="table-container">
+                        <h5 class="mb-3"><i class="fa-solid fa-user-plus text-primary"></i> Registrasi Staf Baru</h5>
+                        
+                        <form id="form-tambah-staf">
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Nama Lengkap</label>
+                                <input type="text" id="staf-nama" class="form-control" placeholder="Masukkan nama staf..." required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Posisi / Jabatan</label>
+                                <select class="form-select" id="staf-posisi" required>
+                                    <option value="" disabled selected>-- Pilih Posisi --</option>
+                                    <option value="1">Housekeeping</option>
+                                    <option value="2">Front Office</option>
+                                    <option value="3">Admin / Back Office</option>
+                                    <option value="4">Manager</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Nomor Telepon</label>
+                                <input type="text" id="staf-telepon" class="form-control" placeholder="Contoh: 08123456789" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Username Akses</label>
+                                <input type="text" id="staf-username" class="form-control" placeholder="Username untuk login" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Password Akses</label>
+                                <input type="password" id="staf-password" class="form-control" placeholder="Password untuk login" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 font-weight-bold">
+                                <i class="fa-solid fa-save"></i> DAFTARKAN STAF
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-md-7">
+                    <div class="table-container">
+                        <h5 class="mb-3"><i class="fa-solid fa-address-book text-success"></i> Daftar Karyawan Aktif</h5>
+                        <p class="text-muted">Data karyawan akan terintegrasi langsung dengan database MySQL.</p>
+                        
+                        <div class="table-responsive mt-3">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Kode Staf</th>
+                                        <th>Nama Lengkap</th>
+                                        <th>Posisi</th>
+                                        <th>Telepon</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-staf-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 
     <div class="modal fade" id="modalDetailTamu" tabindex="-1" aria-labelledby="modalDetailTamuLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -247,7 +319,7 @@
             </div>
           </div>
         </div>
-      </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

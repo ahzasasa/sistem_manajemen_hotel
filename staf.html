@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Staf | Hotel Reservasi</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="staf.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="brand">
+            <h4>PORTAL STAF</h4>
+            <p id="nama-staf-sidebar" class="text-white-50">Memuat Nama...</p>
+        </div>
+        <nav class="nav flex-column mt-3">
+            <a class="nav-link active" href="#" onclick="switchSection('sec-tugas', this)"><i class="fa-solid fa-clipboard-list"></i> Tugas Harian</a>
+            <a class="nav-link" href="#" onclick="switchSection('sec-presensi', this)"><i class="fa-solid fa-clock"></i> Riwayat Presensi</a>
+            <a class="nav-link" href="#" onclick="switchSection('sec-gaji', this)"><i class="fa-solid fa-wallet"></i> Slip Gaji</a>
+            <a class="nav-link" href="#" onclick="switchSection('sec-profil', this)"><i class="fa-solid fa-user-pen"></i> Profil Saya</a>
+            <a class="nav-link text-warning mt-5" href="#" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Keluar</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="sec-tugas" class="staf-section active">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <div class="card card-presensi p-4">
+                            <h5 class="text-center">Kehadiran Hari Ini</h5>
+                            <div class="clock-display" id="jam-digital">00:00:00</div>
+                            <p class="text-center text-muted" id="tanggal-hari-ini">Memuat Tanggal...</p>
+                            <div class="d-grid gap-2 mt-3">
+                                <button class="btn btn-success" id="btn-masuk" onclick="catatPresensi('Masuk')"><i class="fa-solid fa-right-to-bracket"></i> Clock-In</button>
+                                <button class="btn btn-outline-danger" id="btn-pulang" onclick="catatPresensi('Pulang')" disabled><i class="fa-solid fa-right-from-bracket"></i> Clock-Out</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <h5 class="mb-3"><i class="fa-solid fa-clipboard-list"></i> Daftar Tugas Kebersihan Aktif</h5>
+                        <div id="container-tugas"><p class="text-muted">Sedang menyinkronkan data tugas...</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-profil" class="staf-section">
+            <h3>Profil Saya</h3>
+            <p class="text-muted">Data pribadi dan jabatan karyawan.</p>
+        </div>
+        <div id="sec-presensi" class="staf-section">
+            <h3>Riwayat Presensi</h3>
+            <p class="text-muted">Daftar kehadiran bulan ini akan muncul di sini.</p>
+        </div>
+
+        <div id="sec-gaji" class="staf-section">
+            <h3>Slip Gaji</h3>
+            <p class="text-muted">Rekapitulasi gaji bulanan.</p>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="staf.js"></script>
+</body>
+</html>

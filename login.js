@@ -1,67 +1,95 @@
-// Fungsi untuk mengganti tampilan form berdasarkan peran
+// =================================================================
+// 1. LOGIKA TOGGLE UI (Tamu vs Admin/Staf)
+// =================================================================
 function pilihPeran(peran) {
-    document.getElementById('btn-tab-tamu').classList.remove('active');
-    document.getElementById('btn-tab-admin').classList.remove('active');
-    document.getElementById('form-tamu').classList.remove('active');
-    document.getElementById('form-admin').classList.remove('active');
+    const btnTamu = document.getElementById('btn-tab-tamu');
+    const btnAdmin = document.getElementById('btn-tab-admin');
+    const formTamu = document.getElementById('form-tamu');
+    const formAdmin = document.getElementById('form-admin');
+    const pesanError = document.getElementById('pesan-error');
 
     if (peran === 'tamu') {
-        document.getElementById('btn-tab-tamu').classList.add('active');
-        document.getElementById('form-tamu').classList.add('active');
-    } else {
-        document.getElementById('btn-tab-admin').classList.add('active');
-        document.getElementById('form-admin').classList.add('active');
+        btnTamu.classList.add('active');
+        btnAdmin.classList.remove('active');
+        formTamu.classList.add('active');
+        formAdmin.classList.remove('active');
+    } else if (peran === 'admin') {
+        btnAdmin.classList.add('active');
+        btnTamu.classList.remove('active');
+        formAdmin.classList.add('active');
+        formTamu.classList.remove('active');
     }
+    
+    if (pesanError) pesanError.style.display = 'none'; 
 }
 
-// Logika Verifikasi Form Admin (Terhubung ke Database)
+// =================================================================
+// 2. LOGIKA VERIFIKASI & AUTO-ROUTING LOGIN
+// =================================================================
 document.addEventListener('DOMContentLoaded', function() {
-    const formAdmin = document.getElementById('form-login-admin');
-    
-    if (formAdmin) {
-        formAdmin.addEventListener('submit', function(e) {
-            e.preventDefault(); 
+    const formLoginAdmin = document.getElementById('form-login-admin'); 
 
-            const userVal = document.getElementById('username').value;
-            const passVal = document.getElementById('password').value;
-            const errorMsg = document.getElementById('pesan-error');
-            const btnSubmit = formAdmin.querySelector('button[type="submit"]');
+    if (formLoginAdmin) {
+        formLoginAdmin.addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-            // Ubah tombol saat loading
-            btnSubmit.textContent = "MEMVERIFIKASI...";
+            const usernameInput = document.getElementById('username').value;
+            const passwordInput = document.getElementById('password').value;
+            const btnSubmit = formLoginAdmin.querySelector('.btn-admin');
+            const pesanError = document.getElementById('pesan-error');
+
+            const teksAsli = btnSubmit.textContent;
+            btnSubmit.textContent = 'MEMVERIFIKASI...';
             btnSubmit.disabled = true;
+            if (pesanError) pesanError.style.display = 'none'; 
 
-            // Kirim data ke Python Backend
-            fetch('http://127.0.0.1:5000/api/login-admin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: userVal,
-                    password: passVal
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
+                });
+                
+                const data = await response.json();
+
                 if (data.status === 'success') {
-                    errorMsg.style.display = 'none';
-                    // Opsional: Simpan nama admin di penyimpanan lokal browser
-                    sessionStorage.setItem('adminName', data.nama);
-                    // Pindah ke halaman dashboard
-                    window.location.href = 'admin.html';
+                    // ==============================================
+                    // LANGSUNG SIMPAN SESI TANPA POP-UP
+                    // ==============================================
+                    sessionStorage.setItem('staf_logged_in', 'true');
+                    sessionStorage.setItem('staf_username', data.nama); 
+                    sessionStorage.setItem('id_staf', data.id_staf); 
+                    sessionStorage.setItem('id_posisi', data.id_posisi);
+
+                    // ==============================================
+                    // SISTEM AUTO-ROUTING BERDASARKAN ID_POSISI
+                    // ==============================================
+                    const idPosisi = parseInt(data.id_posisi);
+                    
+                    // ID 1 (Manager), 2 (Back Office), 3 (Front Office), 8 (Sales)
+                    const grupDashboardAdmin = [1, 2, 3, 8]; 
+                    
+                    if (grupDashboardAdmin.includes(idPosisi)) {
+                        // Lempar ke Dashboard Utama (Instan)
+                        window.location.href = 'admin.html';
+                    } else {
+                        // Sisa divisi lapangan (Housekeeping, F&B, Wellness, Engineering)
+                        // Lempar ke Portal Staf (Instan)
+                        window.location.href = 'staf.html';
+                    }
                 } else {
-                    // Tolak akses
-                    errorMsg.textContent = "Akses Ditolak: " + data.message;
-                    errorMsg.style.display = 'block';
-                    btnSubmit.textContent = "MASUK KE DASHBOARD";
-                    btnSubmit.disabled = false;
+                    // Pop-up error TETAP ADA agar pengguna tahu jika username/password salah
+                    Swal.fire('Akses Ditolak!', data.message, 'error');
+                    if (pesanError) {
+                        pesanError.textContent = data.message;
+                        pesanError.style.display = 'block';
+                    }
+                    btnSubmit.textContent = teksAsli; btnSubmit.disabled = false;
                 }
-            })
-            .catch(err => {
-                errorMsg.textContent = "Kesalahan server. Pastikan Backend aktif.";
-                errorMsg.style.display = 'block';
-                btnSubmit.textContent = "MASUK KE DASHBOARD";
-                btnSubmit.disabled = false;
-            });
+            } catch (err) {
+                Swal.fire('Error!', 'Gagal terhubung ke server database.', 'error');
+                btnSubmit.textContent = teksAsli; btnSubmit.disabled = false;
+            }
         });
     }
 });

@@ -1,9 +1,12 @@
+-- ==========================================
+-- 1. SETUP DATABASE
+-- ==========================================
 DROP DATABASE IF EXISTS hotel_reservasi_db;
-CREATE DATABASE hotel_reservasi_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE hotel_reservasi_db;
 USE hotel_reservasi_db;
 
 -- ==========================================
--- 2. TABEL MASTER (Data yang berdiri sendiri)
+-- 2. TABEL MASTER
 -- ==========================================
 
 -- Data Tamu
@@ -34,26 +37,91 @@ CREATE TABLE fasilitas (
     deskripsi TEXT
 ) ENGINE=InnoDB;
 
+-- Data Master Posisi (Sudah dilengkapi kolom counter untuk generator ID)
+CREATE TABLE posisi (
+    id_posisi INT AUTO_INCREMENT PRIMARY KEY,
+    kode_posisi VARCHAR(10) NOT NULL UNIQUE,
+    nama_posisi VARCHAR(50) NOT NULL,
+    counter INT DEFAULT 0
+) ENGINE=InnoDB;
+
 -- Data Staf/Karyawan Hotel
 CREATE TABLE staf (
     id_staf INT AUTO_INCREMENT PRIMARY KEY,
+    kode_staf VARCHAR(20) UNIQUE,
     nama_staf VARCHAR(100) NOT NULL,
-    posisi VARCHAR(50),
-    nomor_telepon VARCHAR(15)
+    id_posisi INT,
+    nomor_telepon VARCHAR(15),
+    username VARCHAR(50) UNIQUE,
+    password VARCHAR(255),
+    FOREIGN KEY (id_posisi) REFERENCES posisi(id_posisi) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+
 -- ==========================================
--- 3. TABEL FISIK & OPERASIONAL (Bergantung pada Tabel Master)
+-- 3. TRIGGERS UNTUK KODE STAF OTOMATIS
+-- ==========================================
+
+DELIMITER //
+
+-- Trigger 1: Otomatis membuat ID saat mendaftarkan staf baru
+CREATE TRIGGER trg_staf_insert
+BEFORE INSERT ON staf
+FOR EACH ROW
+BEGIN
+    DECLARE v_kode VARCHAR(10);
+    DECLARE v_seq INT;
+
+    -- Ambil kode (contoh: HK) dan naikkan angka counternya
+    SELECT kode_posisi, counter + 1 INTO v_kode, v_seq
+    FROM posisi WHERE id_posisi = NEW.id_posisi;
+
+    -- Simpan urutan terbaru kembali ke tabel posisi
+    UPDATE posisi SET counter = v_seq WHERE id_posisi = NEW.id_posisi;
+
+    -- Gabungkan menjadi kode_staf (Contoh: HK-001)
+    SET NEW.kode_staf = CONCAT(v_kode, '-', LPAD(v_seq, 3, '0'));
+END //
+
+-- Trigger 2: Otomatis mengubah ID jika staf dipindahtugaskan
+CREATE TRIGGER trg_staf_update
+BEFORE UPDATE ON staf
+FOR EACH ROW
+BEGIN
+    DECLARE v_kode VARCHAR(10);
+    DECLARE v_seq INT;
+
+    -- Hanya ganti ID JIKA posisinya benar-benar diubah!
+    IF NEW.id_posisi != OLD.id_posisi THEN
+        
+        -- Ambil kode dari posisi yang BARU
+        SELECT kode_posisi, counter + 1 INTO v_kode, v_seq
+        FROM posisi WHERE id_posisi = NEW.id_posisi;
+
+        -- Simpan urutan terbaru ke tabel posisi
+        UPDATE posisi SET counter = v_seq WHERE id_posisi = NEW.id_posisi;
+
+        -- Timpa kode_staf lama dengan kode posisi yang baru!
+        SET NEW.kode_staf = CONCAT(v_kode, '-', LPAD(v_seq, 3, '0'));
+        
+    END IF;
+END //
+
+DELIMITER ;
+
+
+-- ==========================================
+-- 4. TABEL FISIK & OPERASIONAL 
 -- ==========================================
 
 -- Data Fisik Kamar
 CREATE TABLE kamar (
     id_kamar INT AUTO_INCREMENT PRIMARY KEY,
     id_tipe INT,
-    nomor_kamar VARCHAR(10),
+    nomor_kamar VARCHAR(10) UNIQUE NOT NULL,
     lantai INT,
     is_smoking BOOLEAN DEFAULT FALSE,
-    status ENUM('Tersedia', 'Terisi') DEFAULT 'Tersedia',
+    status ENUM('Tersedia', 'Terisi', 'Kotor', 'Perbaikan') DEFAULT 'Tersedia',
     FOREIGN KEY (id_tipe) REFERENCES tipe_kamar(id_tipe) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -69,8 +137,9 @@ CREATE TABLE jadwal_kebersihan (
     FOREIGN KEY (id_staf) REFERENCES staf(id_staf) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+
 -- ==========================================
--- 4. TABEL RESERVASI (Inti Sistem)
+-- 5. TABEL RESERVASI (Inti Sistem)
 -- ==========================================
 
 -- Reservasi Utama (Kamar)
@@ -79,7 +148,7 @@ CREATE TABLE reservasi (
     id_tamu INT,
     tanggal_masuk DATETIME NOT NULL,
     tanggal_keluar DATETIME NOT NULL,
-    status_pesanan ENUM('Menunggu', 'Dikonfirmasi', 'Selesai') DEFAULT 'Menunggu',
+    status_pesanan ENUM('Menunggu', 'Aktif', 'Selesai', 'Batal') DEFAULT 'Menunggu',
     metode_pembayaran VARCHAR(50) DEFAULT 'Pay at Hotel', 
     FOREIGN KEY (id_tamu) REFERENCES tamu(id_tamu) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -110,8 +179,9 @@ CREATE TABLE reservasi_fasilitas (
     FOREIGN KEY (id_fasilitas) REFERENCES fasilitas(id_fasilitas) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+
 -- ==========================================
--- 5. TABEL KEUANGAN (Billing & Payment)
+-- 6. TABEL KEUANGAN (Billing & Payment)
 -- ==========================================
 
 -- Tagihan Komprehensif
@@ -140,6 +210,117 @@ CREATE TABLE pembayaran (
 
 
 -- ==========================================
+-- 7. DATA DEFAULT (Seed Data)
+-- ==========================================
+
+-- Masukkan Master Posisi
+INSERT INTO posisi (kode_posisi, nama_posisi) VALUES
+('MG', 'Manager'),
+('BO', 'Back Office'),
+('FO', 'Front Office'),
+('HK', 'Housekeeping'),
+('FB', 'Food & Beverage'),
+('WS', 'Wellness $ SPA'),
+('EN', 'Engineering'),
+('SM', 'Sales & Marketing');
+
+-- ==========================================
+-- MASUKKAN AKUN MASTER & STAF (K-UNIVERSE EDITION)
+-- ==========================================
+INSERT INTO staf (nama_staf, id_posisi, nomor_telepon, username, password) VALUES
+
+-- 1. Manager (id_posisi = 1)
+('Kim Do Hyun', 1, '081100000001', 'kim.dohyun', 'hotel123'),
+('Lee Min Seok', 1, '081112223333', 'lee.minseok', 'hotel123'),
+('Park Seo Jin', 1, '081100000003', 'park.seojin', 'hotel123'),
+
+-- 2. Back Office / Admin (id_posisi = 2)
+('Administrator', 2, '080000000000', 'admin', 'admin123'),
+('Choi Yu Jin', 2, '081100000002', 'choi.yujin', 'hotel123'),
+('Kang Seul Ha', 2, '081100000004', 'kang.seulha', 'hotel123'),
+
+-- 3. Front Office (id_posisi = 3)
+('Hwang Hyun Woo', 3, '081400003001', 'hwang.hyunwoo', 'hotel123'),
+('Bae Su Jin', 3, '081400003002', 'bae.sujin', 'hotel123'),
+('Kwon Eun Ah', 3, '081400003003', 'kwon.eunah', 'hotel123'),
+('Yoon San Ha', 3, '081400003004', 'yoon.sanha', 'hotel123'),
+('Ahn Yu Rim', 3, '081400003005', 'ahn.yurim', 'hotel123'),
+('Song Ji Woo', 3, '081400003006', 'song.jiwoo', 'hotel123'),
+('Lim Na Hee', 3, '081400003007', 'lim.nahee', 'hotel123'),
+('Han So Yoon', 3, '081400003008', 'han.soyoon', 'hotel123'),
+
+-- 4. Housekeeping (id_posisi = 4)
+('Jung Eun Chae', 4, '081234567890', 'jung.eunchae', 'hotel123'),
+('Kim Ji Hoon', 4, '081298765432', 'kim.jihoon', 'hotel123'),
+('Lee Soo Jin', 4, '081311223344', 'lee.soojin', 'hotel123'),
+('Park Min Ho', 4, '081200001001', 'park.minho', 'hotel123'),
+('Choi Eun Ji', 4, '081200001002', 'choi.eunji', 'hotel123'),
+('Kang Seung Ho', 4, '081200001003', 'kang.seungho', 'hotel123'),
+('Jung Yoo Jin', 4, '081200001004', 'jung.yoojin', 'hotel123'),
+('Shin Dong Woo', 4, '081200001005', 'shin.dongwoo', 'hotel123'),
+('Jeon Ha Eun', 4, '081200001006', 'jeon.haeun', 'hotel123'),
+('Min Ji Won', 4, '081200001007', 'min.jiwon', 'hotel123'),
+('Song Jae Hyun', 4, '081200001008', 'song.jaehyun', 'hotel123'),
+('Hwang Bo Ra', 4, '081200001009', 'hwang.bora', 'hotel123'),
+('Bae Do Hoon', 4, '081200001010', 'bae.dohoon', 'hotel123'),
+('Kwon Ji Hoon', 4, '081200001011', 'kwon.jihoon', 'hotel123'),
+('Yoon Seo Yeon', 4, '081200001012', 'yoon.seoyeon', 'hotel123'),
+('Ahn Sung Min', 4, '081200001013', 'ahn.sungmin', 'hotel123'),
+('Oh Se Jin', 4, '081200001014', 'oh.sejin', 'hotel123'),
+('Seo Ye Rin', 4, '081200001015', 'seo.yerin', 'hotel123'),
+('Han Hyo Jin', 4, '081200001016', 'han.hyojin', 'hotel123'),
+('Yoo Jae Min', 4, '081200001017', 'yoo.jaemin', 'hotel123'),
+('Moon Dong Eun', 4, '081200001018', 'moon.dongeun', 'hotel123'),
+('Go Yoon Ha', 4, '081200001019', 'go.yoonha', 'hotel123'),
+('Baek Hyun Woo', 4, '081200001020', 'baek.hyunwoo', 'hotel123'),
+('Hong Hae In', 4, '081200001021', 'hong.haein', 'hotel123'),
+('Na Hee Do', 4, '081200001022', 'na.heedo', 'hotel123'),
+('Baek Yi Jin', 4, '081200001023', 'baek.yijin', 'hotel123'),
+('Sung Deok Sun', 4, '081200001024', 'sung.deoksun', 'hotel123'),
+('Choi Taek', 4, '081200001025', 'choi.taek', 'hotel123'),
+('Kim Jung Hwan', 4, '081200001026', 'kim.junghwan', 'hotel123'),
+('Sung Sun Woo', 4, '081200001027', 'sung.sunwoo', 'hotel123'),
+('Ryu Dong Ryong', 4, '081200001028', 'ryu.dongryong', 'hotel123'),
+('Jang Geu Rae', 4, '081200001029', 'jang.geurae', 'hotel123'),
+('Ahn Young Yi', 4, '081200001030', 'ahn.youngyi', 'hotel123'),
+
+-- 5. Food & Beverage (id_posisi = 5)
+('Kim Shin', 5, '081500004001', 'kim.shin', 'hotel123'),
+('Ji Eun Tak', 5, '081500004002', 'ji.euntak', 'hotel123'),
+('Wang Yeo', 5, '081500004003', 'wang.yeo', 'hotel123'),
+('Lee Dam', 5, '081500004004', 'lee.dam', 'hotel123'),
+('Shin Woo Yeo', 5, '081500004005', 'shin.wooyeo', 'hotel123'),
+('Gye Sun Woo', 5, '081500004006', 'gye.sunwoo', 'hotel123'),
+('Jo Yi Seo', 5, '081500004007', 'jo.yiseo', 'hotel123'),
+('Park Sae Ro Yi', 5, '081500004008', 'park.saeroyi', 'hotel123'),
+
+-- 6. Wellness & SPA (id_posisi = 6)
+('Yoon Se Ri', 6, '081600005001', 'yoon.seri', 'hotel123'),
+('Ri Jeong Hyeok', 6, '081600005002', 'ri.jeonghyeok', 'hotel123'),
+('Seo Dan', 6, '081600005003', 'seo.dan', 'hotel123'),
+('Gu Seung Joon', 6, '081600005004', 'gu.seungjoon', 'hotel123'),
+
+-- 7. Engineering (id_posisi = 7)
+('Lee Ik Jun', 7, '081555666777', 'lee.ikjun', 'hotel123'),
+('Ahn Jeong Won', 7, '081300002001', 'ahn.jeongwon', 'hotel123'),
+('Kim Jun Wan', 7, '081300002002', 'kim.junwan', 'hotel123'),
+('Yang Seok Hyeong', 7, '081300002003', 'yang.seokhyeong', 'hotel123'),
+('Chae Song Hwa', 7, '081300002004', 'chae.songhwa', 'hotel123'),
+('Jang Gyeo Ul', 7, '081300002005', 'jang.gyeoul', 'hotel123'),
+('Chu Min Ha', 7, '081300002006', 'chu.minha', 'hotel123'),
+('Do Jae Hak', 7, '081300002007', 'do.jaehak', 'hotel123'),
+('Hong Cha Young', 7, '081300002008', 'hong.chayoung', 'hotel123'),
+('Jang Jun Woo', 7, '081300002009', 'jang.junwoo', 'hotel123'),
+('Park Bin Ho', 7, '081300002010', 'park.binho', 'hotel123'),
+
+-- 8. Sales & Marketing (id_posisi = 8)
+('Oh Soo Ah', 8, '081700006001', 'oh.sooah', 'hotel123'),
+('Jang Geun Won', 8, '081700006002', 'jang.geunwon', 'hotel123'),
+('Kang Tae Moo', 8, '081700006003', 'kang.taemoo', 'hotel123'),
+('Shin Ha Ri', 8, '081700006004', 'shin.hari', 'hotel123');
+
+
+-- ==========================================
 -- 6. INPUT DATA AWAL (Tipe Kamar, Fasilitas, Kamar Fisik)
 -- ==========================================
 
@@ -160,6 +341,15 @@ INSERT INTO tipe_kamar VALUES
 (12, 'Suite Room', 2, 22, 24, 4000000),
 (13, 'Presidential Suite', 4, 25, 25, 10000000);
 
+
+
+INSERT INTO fasilitas (nama_fasilitas, kategori, harga_dasar, satuan_harga, deskripsi) VALUES
+('Restaurant Reservation', 'F&B', 250000, 'per orang', 'Reservasi meja makan VIP dengan set menu eksklusif.'),
+('Rooftop Bar', 'F&B', 150000, 'per orang', 'Akses ke rooftop bar dengan pemandangan kota, termasuk 1 welcome drink.'),
+('Ballroom', 'Event', 35000000, 'per hari', 'Sewa ballroom utama berkapasitas besar untuk berbagai acara elegan.'),
+('Meeting Room', 'Event', 550000, 'per orang', 'Paket Pertemuan Sehari Penuh (8 Jam) termasuk sewa ruangan, 2x Coffee Break & 1x Makan Siang/Malam.'),
+('Wedding Package', 'Event', 85000000, 'per paket', 'Paket pernikahan komprehensif termasuk katering, dekorasi standar, dan kamar pengantin.'),
+('Spa & Wellness', 'Wellness', 450000, 'per sesi', 'Sesi relaksasi pijat tradisional selama 90 menit oleh terapis profesional.');
 
 
 INSERT INTO kamar (id_tipe, nomor_kamar, status) VALUES 
@@ -651,96 +841,3 @@ INSERT INTO kamar (id_tipe, nomor_kamar, status) VALUES
 (13, '2502', 'Tersedia'),
 (13, '2503', 'Tersedia'),
 (13, '2504', 'Tersedia');
-
-
-INSERT INTO fasilitas (nama_fasilitas, kategori, harga_dasar, satuan_harga, deskripsi) VALUES
-('Restaurant Reservation', 'F&B', 250000, 'per orang', 'Reservasi meja makan VIP dengan set menu eksklusif.'),
-('Rooftop Bar', 'F&B', 150000, 'per orang', 'Akses ke rooftop bar dengan pemandangan kota, termasuk 1 welcome drink.'),
-('Ballroom', 'Event', 35000000, 'per hari', 'Sewa ballroom utama berkapasitas besar untuk berbagai acara elegan.'),
-('Meeting Room', 'Event', 550000, 'per orang', 'Paket Pertemuan Sehari Penuh (8 Jam) termasuk sewa ruangan, 2x Coffee Break & 1x Makan Siang/Malam.'),
-('Wedding Package', 'Event', 85000000, 'per paket', 'Paket pernikahan komprehensif termasuk katering, dekorasi standar, dan kamar pengantin.'),
-('Spa & Wellness', 'Wellness', 450000, 'per sesi', 'Sesi relaksasi pijat tradisional selama 90 menit oleh terapis profesional.');
-
-
-
--- ==========================================
--- INPUT DATA MASTER STAF (SKALA HOTEL BESAR 436 KAMAR)
--- ==========================================
-INSERT INTO staf (nama_staf, posisi, nomor_telepon) VALUES 
-
--- 1. MANAGEMENT & SUPERVISOR (5 Orang)
-('Ratna Sari Dewi', 'Executive Housekeeper', '081112223333'),
-('Budi Santoso', 'Housekeeping Supervisor', '081234567890'),
-('Siti Aminah', 'Housekeeping Supervisor', '081298765432'),
-('Rina Marlina', 'Housekeeping Supervisor', '081311223344'),
-('Hendra Gunawan', 'Chief Engineering', '081555666777'),
-
--- 2. HOUSEKEEPING / ROOM ATTENDANT (30 Orang - Dibagi 3 Shift)
-('Andi Saputra', 'Room Attendant', '081200001001'),
-('Dewi Lestari', 'Room Attendant', '081200001002'),
-('Agus Pratama', 'Room Attendant', '081200001003'),
-('Rini Wulandari', 'Room Attendant', '081200001004'),
-('Fajar Nugroho', 'Room Attendant', '081200001005'),
-('Nita Kusuma', 'Room Attendant', '081200001006'),
-('Dedi Setiawan', 'Room Attendant', '081200001007'),
-('Sari Indah', 'Room Attendant', '081200001008'),
-('Reza Pahlevi', 'Room Attendant', '081200001009'),
-('Maya Safitri', 'Room Attendant', '081200001010'),
-('Arief Rahman', 'Room Attendant', '081200001011'),
-('Tika Puspita', 'Room Attendant', '081200001012'),
-('Bagus Wijaya', 'Room Attendant', '081200001013'),
-('Lina Marlina', 'Room Attendant', '081200001014'),
-('Eko Prasetyo', 'Room Attendant', '081200001015'),
-('Rina Yuliana', 'Room Attendant', '081200001016'),
-('Yudi Herdiana', 'Room Attendant', '081200001017'),
-('Siska Rahmawati', 'Room Attendant', '081200001018'),
-('Dani Ramadhan', 'Room Attendant', '081200001019'),
-('Ani Haryanti', 'Room Attendant', '081200001020'),
-('Rizky Maulana', 'Room Attendant', '081200001021'),
-('Fitriani', 'Room Attendant', '081200001022'),
-('Wahyu Hidayat', 'Room Attendant', '081200001023'),
-('Dina Mariana', 'Room Attendant', '081200001024'),
-('Surya Saputra', 'Room Attendant', '081200001025'),
-('Mia Audina', 'Room Attendant', '081200001026'),
-('Iwan Fals', 'Room Attendant', '081200001027'),
-('Nurul Huda', 'Room Attendant', '081200001028'),
-('Gilang Dirga', 'Room Attendant', '081200001029'),
-('Ayu Ting Ting', 'Room Attendant', '081200001030'),
-
--- 3. ENGINEERING / TEKNISI (10 Orang - Bertugas untuk maintenance/perbaikan)
-('Bambang Pamungkas', 'Teknisi AC & Listrik', '081300002001'),
-('Taufik Hidayat', 'Teknisi AC & Listrik', '081300002002'),
-('Ari Wibowo', 'Teknisi Plumbing/Air', '081300002003'),
-('Rafi Ahmad', 'Teknisi Plumbing/Air', '081300002004'),
-('Deny Cagur', 'Teknisi Umum', '081300002005'),
-('Andre Taulany', 'Teknisi Umum', '081300002006'),
-('Sule Prikitiew', 'Teknisi Elektronik', '081300002007'),
-('Parto Patrio', 'Teknisi Elektronik', '081300002008'),
-('Nunung Srimulat', 'Tukang Kayu / Sipil', '081300002009'),
-('Azis Gagap', 'Tukang Kayu / Sipil', '081300002010'),
-
--- 4. FRONT OFFICE / RESEPSIONIS (8 Orang)
-('Isyana Sarasvati', 'Front Desk Agent', '081400003001'),
-('Raisa Andriana', 'Front Desk Agent', '081400003002'),
-('Afgansyah Reza', 'Front Desk Agent', '081400003003'),
-('Vidi Aldiano', 'Front Desk Agent', '081400003004'),
-('Maudy Ayunda', 'Guest Relation Officer', '081400003005'),
-('Chelsea Islan', 'Guest Relation Officer', '081400003006'),
-('Reza Rahadian', 'Concierge / Bellboy', '081400003007'),
-('Chicco Jerikho', 'Concierge / Bellboy', '081400003008'),
-
--- 5. FOOD & BEVERAGE / EVENT (8 Orang)
-('Renatta Moeloek', 'Executive Chef', '081500004001'),
-('Juna Rorimpandey', 'Sous Chef', '081500004002'),
-('Arnold Poernomo', 'Restaurant Manager', '081500004003'),
-('Boy William', 'Bartender', '081500004004'),
-('Daniel Mananta', 'Bartender', '081500004005'),
-('Luna Maya', 'Banquet / Event Coord', '081500004006'),
-('Tara Basro', 'Waitress', '081500004007'),
-('Nicholas Saputra', 'Waiter', '081500004008'),
-
--- 6. WELLNESS & SPA (4 Orang)
-('Dian Sastrowardoyo', 'Spa Manager', '081600005001'),
-('Adinia Wirasti', 'Spa Therapist', '081600005002'),
-('Putri Marino', 'Spa Therapist', '081600005003'),
-('Julie Estelle', 'Spa Therapist', '081600005004');

@@ -1,0 +1,77 @@
+/* Struktur Utama */
+body { 
+    display: flex; 
+    height: 100vh; 
+    overflow: hidden; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background-color: #f4f7f6; 
+    margin: 0;
+}
+
+/* Sidebar Navigasi */
+.sidebar { 
+    width: 250px; 
+    background-color: #154230; 
+    color: white; 
+    padding: 20px; 
+    flex-shrink: 0; 
+}
+
+.brand { 
+    padding-bottom: 20px; 
+    border-bottom: 1px solid #1a5e42; 
+    margin-bottom: 10px; 
+}
+
+.nav-link { 
+    color: #e0e0e0 !important; 
+    padding: 12px 15px; 
+    cursor: pointer; 
+    transition: 0.3s;
+}
+
+.nav-link:hover, .nav-link.active { 
+    background-color: #198754; 
+    color: white !important; 
+    border-radius: 8px; 
+}
+
+/* Area Konten Utama */
+.main-content { 
+    flex: 1; 
+    padding: 30px; 
+    overflow-y: auto; 
+}
+
+.staf-section { display: none; }
+.staf-section.active { display: block; }
+
+/* Komponen Kartu & Presensi */
+.card-presensi { 
+    background: white;
+    border-top: 5px solid #198754; 
+    border-radius: 10px; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
+}
+
+.task-card { 
+    background: white;
+    border-left: 5px solid #ffc107; 
+    border-radius: 8px; 
+    margin-bottom: 15px; 
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    transition: transform 0.2s;
+}
+
+.task-card:hover { 
+    transform: scale(1.01); 
+}
+
+.clock-display { 
+    font-size: 2rem; 
+    font-weight: bold; 
+    color: #154230; 
+    text-align: center; 
+    margin: 10px 0; 
+}

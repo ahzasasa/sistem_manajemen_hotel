@@ -22,6 +22,37 @@ def get_db_connection():
 
 
 # ==========================================
+# FUNGSI BANTUAN (HELPER)
+# ==========================================
+def generasi_kode_staf(id_posisi, cursor):
+    # 1. Tarik kode_posisi dari tabel master 'posisi' berdasarkan ID
+    cursor.execute("SELECT kode_posisi FROM posisi WHERE id_posisi = %s", (id_posisi,))
+    hasil_posisi = cursor.fetchone()
+
+    # Jika ID posisi tidak ditemukan, gunakan 'STF' sebagai cadangan
+    prefix_posisi = hasil_posisi['kode_posisi'] if hasil_posisi else 'STF'
+    prefix = f"{prefix_posisi}-"
+
+    # 2. Cari kode_staf terakhir dengan prefix yang sama di tabel staf
+    cursor.execute("""
+        SELECT kode_staf FROM staf 
+        WHERE kode_staf LIKE %s 
+        ORDER BY LENGTH(kode_staf) DESC, kode_staf DESC LIMIT 1
+    """, (prefix + '%',))
+    
+    last_staf = cursor.fetchone()
+
+    # 3. Potong teks urutan belakang, lalu naikkan 1 angka dengan zero-padding
+    if last_staf and last_staf['kode_staf']:
+        last_num = int(last_staf['kode_staf'].split('-')[-1])
+        next_kode = f"{prefix}{str(last_num + 1).zfill(3)}"
+    else:
+        next_kode = f"{prefix}001"
+
+    return next_kode
+
+
+# ==========================================
 # ENDPOINT API
 # ==========================================
 
@@ -898,7 +929,109 @@ def detail_kamar_aktif():
         if conn: conn.close()
         
         
-                                                        
+
+# ==========================================
+# ENDPOINT LOGIN TERPUSAT (AUTO-ROUTING)
+# ==========================================
+@app.route('/api/login', methods=['POST'])
+def proses_login():
+    data = request.json
+    user = data.get('username')
+    pw = data.get('password')
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Tarik semua data termasuk id_posisi untuk menentukan arah lemparan halaman
+        cursor.execute("""
+            SELECT s.id_staf, s.nama_staf, p.nama_posisi AS posisi, s.id_posisi 
+            FROM staf s
+            JOIN posisi p ON s.id_posisi = p.id_posisi
+            WHERE s.username = %s AND s.password = %s
+        """, (user, pw))
+        
+        staf = cursor.fetchone()
+
+        if staf:
+            return jsonify({
+                "status": "success",
+                "id_staf": staf['id_staf'],
+                "nama": staf['nama_staf'],
+                "posisi": staf['posisi'],
+                "id_posisi": staf['id_posisi'] # Kirim ID Posisi ke JavaScript
+            })
+        else:
+            return jsonify({"status": "error", "message": "Username atau password tidak ditemukan."})
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+# ==========================================
+# ENDPOINT PORTAL STAF (HOUSEKEEPING)
+# ==========================================
+
+# 1. Mengambil daftar tugas berdasarkan ID Staf yang sedang login
+@app.route('/api/tugas-staf/<int:id_staf>', methods=['GET'])
+def get_tugas_staf(id_staf):
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Ambil tugas yang statusnya belum selesai
+        cursor.execute("""
+            SELECT j.id_jadwal, j.id_kamar, k.nomor_kamar, j.jenis_tugas, j.status_tugas 
+            FROM jadwal_kebersihan j
+            JOIN kamar k ON j.id_kamar = k.id_kamar
+            WHERE j.id_staf = %s AND j.status_tugas != 'Selesai'
+        """, (id_staf,))
+        
+        tugas = cursor.fetchall()
+        return jsonify({"status": "success", "data": tugas})
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+# 2. Menyelesaikan tugas dan mengubah warna kamar jadi Hijau
+@app.route('/api/selesai-tugas', methods=['POST'])
+def selesai_tugas():
+    data = request.json
+    id_jadwal = data.get('id_jadwal')
+    id_kamar = data.get('id_kamar')
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Update status jadwal menjadi Selesai
+        cursor.execute("UPDATE jadwal_kebersihan SET status_tugas = 'Selesai' WHERE id_jadwal = %s", (id_jadwal,))
+        
+        # Update status kamar kembali menjadi Tersedia (Hijau di layar Admin)
+        cursor.execute("UPDATE kamar SET status = 'Tersedia' WHERE id_kamar = %s", (id_kamar,))
+        
+        conn.commit()
+        return jsonify({"status": "success", "message": "Kamar berhasil dibersihkan dan siap digunakan!"})
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+                                                                        
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================
