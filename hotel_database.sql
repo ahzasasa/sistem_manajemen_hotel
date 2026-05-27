@@ -42,6 +42,8 @@ CREATE TABLE posisi (
     id_posisi INT AUTO_INCREMENT PRIMARY KEY,
     kode_posisi VARCHAR(10) NOT NULL UNIQUE,
     nama_posisi VARCHAR(50) NOT NULL,
+    gaji_pokok DECIMAL(12,2) DEFAULT 0.00,
+    tunjangan DECIMAL(12,2) DEFAULT 0.00,
     counter INT DEFAULT 0
 ) ENGINE=InnoDB;
 
@@ -55,6 +57,31 @@ CREATE TABLE staf (
     username VARCHAR(50) UNIQUE,
     password VARCHAR(255),
     FOREIGN KEY (id_posisi) REFERENCES posisi(id_posisi) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+
+CREATE TABLE presensi (
+    id_presensi INT AUTO_INCREMENT PRIMARY KEY,
+    id_staf INT,
+    tanggal DATE NOT NULL,
+    waktu_masuk TIME,
+    waktu_pulang TIME,
+    status ENUM('Hadir', 'Izin', 'Sakit', 'Mangkir') DEFAULT 'Hadir',
+    FOREIGN KEY (id_staf) REFERENCES staf(id_staf) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
+CREATE TABLE slip_gaji (
+    id_gaji INT AUTO_INCREMENT PRIMARY KEY,
+    id_staf INT,
+    periode_bulan VARCHAR(20) NOT NULL,
+    gaji_pokok DECIMAL(12,2) NOT NULL,
+    tunjangan DECIMAL(12,2) DEFAULT 0,
+    potongan DECIMAL(12,2) DEFAULT 0,
+    total_bersih DECIMAL(12,2) NOT NULL,
+    tanggal_cair DATE,
+    status_pembayaran ENUM('Pending', 'Terbayar') DEFAULT 'Pending',
+    FOREIGN KEY (id_staf) REFERENCES staf(id_staf) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 
@@ -214,15 +241,38 @@ CREATE TABLE pembayaran (
 -- ==========================================
 
 -- Masukkan Master Posisi
-INSERT INTO posisi (kode_posisi, nama_posisi) VALUES
-('MG', 'Manager'),
-('BO', 'Back Office'),
-('FO', 'Front Office'),
-('HK', 'Housekeeping'),
-('FB', 'Food & Beverage'),
-('WS', 'Wellness $ SPA'),
-('EN', 'Engineering'),
-('SM', 'Sales & Marketing');
+INSERT INTO posisi (kode_posisi, nama_posisi, gaji_pokok, tunjangan) VALUES
+('MG', 'Manager', 8500000.00, 1500000.00),
+('BO', 'Back Office', 5000000.00, 750000.00),
+('FO', 'Front Office', 4800000.00, 600000.00),
+('HK', 'Housekeeping', 4200000.00, 400000.00),
+('FB', 'Food & Beverage', 4300000.00, 450000.00),
+('WS', 'Wellness & SPA', 4400000.00, 500000.00),
+('EN', 'Engineering', 4600000.00, 550000.00),
+('SM', 'Sales & Marketing', 4700000.00, 800000.00);
+
+
+
+-- ==========================================
+-- 3. GENERATE SLIP GAJI OTOMATIS (BULAN INI)
+-- ==========================================
+-- Ubah format bulan ke Bahasa Indonesia
+SET lc_time_names = 'id_ID';
+
+-- Tarik data gaji berdasarkan posisi staf dan buatkan slipnya otomatis
+INSERT INTO slip_gaji (id_staf, periode_bulan, gaji_pokok, tunjangan, potongan, total_bersih, tanggal_cair, status_pembayaran)
+SELECT 
+    s.id_staf, 
+    DATE_FORMAT(CURDATE(), '%M %Y'),
+    p.gaji_pokok,  
+    p.tunjangan,   
+    150000.00,
+    (p.gaji_pokok + p.tunjangan - 150000.00), 
+    DATE_FORMAT(CURDATE(), '%Y-%m-01'),
+    'Terbayar'
+FROM staf s
+JOIN posisi p ON s.id_posisi = p.id_posisi;
+
 
 -- ==========================================
 -- MASUKKAN AKUN MASTER & STAF (K-UNIVERSE EDITION)
@@ -318,6 +368,7 @@ INSERT INTO staf (nama_staf, id_posisi, nomor_telepon, username, password) VALUE
 ('Jang Geun Won', 8, '081700006002', 'jang.geunwon', 'hotel123'),
 ('Kang Tae Moo', 8, '081700006003', 'kang.taemoo', 'hotel123'),
 ('Shin Ha Ri', 8, '081700006004', 'shin.hari', 'hotel123');
+
 
 
 -- ==========================================

@@ -1031,7 +1031,203 @@ def selesai_tugas():
         if cursor: cursor.close()
         if conn: conn.close()
         
-                                                                        
+       
+
+# ==========================================
+# ENDPOINT PRESENSI STAF
+# ==========================================
+
+# 1. Mencatat Clock-In dan Clock-Out
+@app.route('/api/presensi', methods=['POST'])
+def catat_presensi():
+    data = request.json
+    id_staf = data.get('id_staf')
+    jenis = data.get('jenis') # 'Masuk' atau 'Pulang'
+    
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Cek apakah hari ini staf sudah absen
+        cursor.execute("SELECT * FROM presensi WHERE id_staf = %s AND tanggal = CURDATE()", (id_staf,))
+        absen_hari_ini = cursor.fetchone()
+        
+        if jenis == 'Masuk':
+            if absen_hari_ini:
+                return jsonify({"status": "error", "message": "Anda sudah Clock-In hari ini!"})
+            # Insert data baru dengan jam saat ini
+            cursor.execute("INSERT INTO presensi (id_staf, tanggal, waktu_masuk) VALUES (%s, CURDATE(), CURTIME())", (id_staf,))
+            
+        elif jenis == 'Pulang':
+            if not absen_hari_ini:
+                return jsonify({"status": "error", "message": "Anda belum Clock-In hari ini!"})
+            if absen_hari_ini['waktu_pulang']:
+                return jsonify({"status": "error", "message": "Anda sudah Clock-Out hari ini!"})
+            
+            # Update jam pulang untuk hari ini
+            cursor.execute("UPDATE presensi SET waktu_pulang = CURTIME() WHERE id_staf = %s AND tanggal = CURDATE()", (id_staf,))
+            
+        conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+# 2. Mengambil Riwayat Presensi (Bulan Ini / 30 Hari Terakhir)
+@app.route('/api/presensi/<int:id_staf>', methods=['GET'])
+def get_riwayat_presensi(id_staf):
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Mengambil data dan menghitung durasi kerja langsung dari MySQL
+        cursor.execute("""
+            SELECT 
+                DATE_FORMAT(tanggal, '%d %b %Y') as tanggal_format,
+                TIME_FORMAT(waktu_masuk, '%H:%i') as waktu_masuk,
+                TIME_FORMAT(waktu_pulang, '%H:%i') as waktu_pulang,
+                status,
+                CASE 
+                    WHEN waktu_pulang IS NOT NULL THEN CONCAT(HOUR(TIMEDIFF(waktu_pulang, waktu_masuk)), ' Jam ', MINUTE(TIMEDIFF(waktu_pulang, waktu_masuk)), ' Menit')
+                    ELSE 'Belum Selesai'
+                END as durasi
+            FROM presensi 
+            WHERE id_staf = %s 
+            ORDER BY tanggal DESC LIMIT 30
+        """, (id_staf,))
+        
+        data = cursor.fetchall()
+        return jsonify({"status": "success", "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+ 
+# ==========================================
+# ENDPOINT PROFIL KARYAWAN
+# ==========================================
+
+# 1. Mengambil detail biodata karyawan
+@app.route('/api/profil/<int:id_staf>', methods=['GET'])
+def get_profil_staf(id_staf):
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT s.kode_staf, s.nama_staf, s.nomor_telepon, s.username, p.nama_posisi 
+            FROM staf s
+            JOIN posisi p ON s.id_posisi = p.id_posisi
+            WHERE s.id_staf = %s
+        """, (id_staf,))
+        
+        profil = cursor.fetchone()
+        if profil:
+            return jsonify({"status": "success", "data": profil})
+        return jsonify({"status": "error", "message": "Data tidak ditemukan"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+# 2. Mengubah Password Akun
+@app.route('/api/ubah-password', methods=['POST'])
+def ubah_password():
+    data = request.json
+    id_staf = data.get('id_staf')
+    pass_lama = data.get('pass_lama')
+    pass_baru = data.get('pass_baru')
+    
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Cek apakah password lama benar
+        cursor.execute("SELECT password FROM staf WHERE id_staf = %s", (id_staf,))
+        staf = cursor.fetchone()
+        
+        if staf['password'] != pass_lama:
+            return jsonify({"status": "error", "message": "Kata sandi lama yang Anda masukkan SALAH."})
+            
+        # Jika benar, update ke password baru
+        cursor.execute("UPDATE staf SET password = %s WHERE id_staf = %s", (pass_baru, id_staf))
+        conn.commit()
+        
+        return jsonify({"status": "success", "message": "Kata sandi berhasil diperbarui!"})
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+        
+# ==========================================
+# ENDPOINT SLIP GAJI
+# ==========================================
+
+@app.route('/api/gaji/<int:id_staf>', methods=['GET'])
+def get_slip_gaji(id_staf):
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT id_gaji, periode_bulan, gaji_pokok, tunjangan, potongan, total_bersih,
+                   DATE_FORMAT(tanggal_cair, '%d %b %Y') as tanggal_cair, status_pembayaran
+            FROM slip_gaji
+            WHERE id_staf = %s
+            ORDER BY id_gaji DESC
+        """, (id_staf,))
+        
+        gaji = cursor.fetchall()
+        return jsonify({"status": "success", "data": gaji})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close() 
+        
+
+# ==========================================
+# ENDPOINT MANAJEMEN STAF (ADMIN PORTAL)
+# ==========================================
+
+@app.route('/api/staf', methods=['GET'])
+def get_semua_staf():
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Ambil semua staf beserta nama posisinya, urutkan berdasarkan Divisi
+        cursor.execute("""
+            SELECT s.kode_staf, s.nama_staf, p.nama_posisi, s.nomor_telepon 
+            FROM staf s
+            JOIN posisi p ON s.id_posisi = p.id_posisi
+            ORDER BY p.id_posisi ASC, s.nama_staf ASC
+        """)
+        
+        staf_list = cursor.fetchall()
+        return jsonify({"status": "success", "data": staf_list})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()       
+                                                                         
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================

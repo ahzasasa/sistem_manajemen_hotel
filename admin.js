@@ -1,7 +1,18 @@
-// Cek apakah admin sudah login (menggunakan sessionStorage yang kita set di login.js sebelumnya)
-if (!sessionStorage.getItem('adminName')) {
-    alert("Akses ditolak! Silakan login terlebih dahulu.");
+// ==========================================
+// 1. SISTEM KEAMANAN & OTORISASI HALAMAN
+// ==========================================
+if (sessionStorage.getItem('staf_logged_in') !== 'true') {
+    alert('Akses ditolak! Silakan login terlebih dahulu.');
     window.location.href = 'login.html';
+}
+
+// Keamanan Lapis 2: Pastikan yang masuk benar-benar memiliki Hak Akses Admin
+const idPosisi = parseInt(sessionStorage.getItem('id_posisi'));
+const grupAdmin = [1, 2, 3, 8]; // 1:Manager, 2:BackOffice, 3:FrontOffice, 8:Sales
+
+if (!grupAdmin.includes(idPosisi)) {
+    alert('Akses Ilegal! Anda tidak memiliki izin ke Dashboard Admin.');
+    window.location.href = 'staf.html'; // Lempar kembali ke portal lapangan
 }
 
 // =========================================================================
@@ -467,3 +478,47 @@ function simpanTugasHousekeeping() {
         });
     }
 }
+
+// ==========================================
+// FUNGSI MEMUAT DAFTAR KARYAWAN
+// ==========================================
+async function muatDaftarStaf() {
+    const tbody = document.getElementById('table-karyawan-body');
+    if (!tbody) return;
+
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/staf');
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            tbody.innerHTML = ''; // Kosongkan tulisan "Menghubungkan..."
+
+            if (result.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-muted py-4">Belum ada data staf di database.</td></tr>';
+                return;
+            }
+
+            // Cetak data satu per satu
+            result.data.forEach(staf => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold text-primary">${staf.kode_staf || '-'}</td>
+                    <td class="text-start">${staf.nama_staf}</td>
+                    <td><span class="badge bg-secondary">${staf.nama_posisi}</span></td>
+                    <td>${staf.nomor_telepon}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-danger py-4">Gagal terhubung ke server database.</td></tr>';
+    }
+}
+
+// ==========================================
+// JALANKAN SAAT HALAMAN DIMUAT
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Panggil fungsi pemuat tabel staf
+    muatDaftarStaf();
+});

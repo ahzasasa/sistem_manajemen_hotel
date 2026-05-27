@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <link rel="stylesheet" href="staf.css">
 </head>
 <body>
@@ -32,36 +33,159 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-md-4 mb-4">
-                        <div class="card card-presensi p-4">
+                        <div class="card card-presensi p-4 h-100 border-0 shadow-sm">
                             <h5 class="text-center">Kehadiran Hari Ini</h5>
                             <div class="clock-display" id="jam-digital">00:00:00</div>
                             <p class="text-center text-muted" id="tanggal-hari-ini">Memuat Tanggal...</p>
                             <div class="d-grid gap-2 mt-3">
-                                <button class="btn btn-success" id="btn-masuk" onclick="catatPresensi('Masuk')"><i class="fa-solid fa-right-to-bracket"></i> Clock-In</button>
-                                <button class="btn btn-outline-danger" id="btn-pulang" onclick="catatPresensi('Pulang')" disabled><i class="fa-solid fa-right-from-bracket"></i> Clock-Out</button>
+                                <button class="btn btn-success fw-bold" id="btn-masuk" onclick="catatPresensi('Masuk')">
+                                    <i class="fa-solid fa-right-to-bracket"></i> Clock-In
+                                </button>
+                                <button class="btn btn-outline-danger fw-bold" id="btn-pulang" onclick="catatPresensi('Pulang')" disabled>
+                                    <i class="fa-solid fa-right-from-bracket"></i> Clock-Out
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-8">
-                        <h5 class="mb-3"><i class="fa-solid fa-clipboard-list"></i> Daftar Tugas Kebersihan Aktif</h5>
-                        <div id="container-tugas"><p class="text-muted">Sedang menyinkronkan data tugas...</p></div>
+                    <div class="col-md-8 mb-4">
+                        <h5 class="mb-3"><i class="fa-solid fa-clipboard-list text-primary"></i> Daftar Tugas Operasional Aktif</h5>
+                        <div id="container-tugas">
+                            <p class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Sedang menyinkronkan data tugas...</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="sec-profil" class="staf-section">
-            <h3>Profil Saya</h3>
-            <p class="text-muted">Data pribadi dan jabatan karyawan.</p>
-        </div>
         <div id="sec-presensi" class="staf-section">
-            <h3>Riwayat Presensi</h3>
-            <p class="text-muted">Daftar kehadiran bulan ini akan muncul di sini.</p>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3><i class="fa-solid fa-clock-rotate-left text-primary"></i> Riwayat Kehadiran</h3>
+                <button class="btn btn-outline-success btn-sm fw-bold" onclick="muatRiwayatPresensi()">
+                    <i class="fa-solid fa-rotate"></i> Segarkan Data
+                </button>
+            </div>
+            
+            <div class="bg-white p-3 rounded shadow-sm border-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle text-center mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Clock-In (Masuk)</th>
+                                <th>Clock-Out (Pulang)</th>
+                                <th>Total Durasi</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-presensi-body">
+                            <tr><td colspan="5" class="text-muted py-4">Mengambil data dari server...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div id="sec-gaji" class="staf-section">
-            <h3>Slip Gaji</h3>
-            <p class="text-muted">Rekapitulasi gaji bulanan.</p>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3><i class="fa-solid fa-wallet text-success"></i> Slip Gaji Bulanan</h3>
+                <button class="btn btn-outline-success btn-sm fw-bold" onclick="muatSlipGaji()">
+                    <i class="fa-solid fa-rotate"></i> Segarkan Data
+                </button>
+            </div>
+            
+            <div class="bg-white p-3 rounded shadow-sm border-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle text-center mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Periode</th>
+                                <th>Gaji Pokok</th>
+                                <th>Tunjangan</th>
+                                <th>Potongan</th>
+                                <th>Total Bersih</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-gaji-body">
+                            <tr><td colspan="7" class="text-muted py-4">Mengambil data dari server...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-profil" class="staf-section">
+            <h3 class="mb-4"><i class="fa-solid fa-user-pen text-info"></i> Manajemen Profil Karyawan</h3>
+            
+            <div class="row">
+                <div class="col-md-7 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <h5 class="mb-0 text-primary"><i class="fa-regular fa-id-card"></i> Informasi Data Diri</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                                <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-4" style="width: 80px; height: 80px;">
+                                    <i class="fa-solid fa-user-tie fa-3x text-secondary"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1 fw-bold" id="prof-nama">Memuat...</h4>
+                                    <span class="badge bg-primary" id="prof-jabatan">Memuat...</span>
+                                </div>
+                            </div>
+                            
+                            <table class="table table-borderless table-sm mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted" style="width: 40%;">Kode Staf (ID)</td>
+                                        <td class="fw-bold" id="prof-kode">: -</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Nomor Telepon</td>
+                                        <td class="fw-bold" id="prof-telepon">: -</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Username Login</td>
+                                        <td class="fw-bold" id="prof-username">: -</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Status Karyawan</td>
+                                        <td class="fw-bold text-success">: <i class="fa-solid fa-circle-check"></i> Aktif Bekerja</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-5 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <h5 class="mb-0 text-danger"><i class="fa-solid fa-shield-halved"></i> Keamanan Akun</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="text-muted small mb-4">Ganti kata sandi Anda secara berkala untuk menjaga keamanan akun portal staf.</p>
+                            
+                            <form id="form-ubah-password">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">Kata Sandi Saat Ini</label>
+                                    <input type="password" id="pass-lama" class="form-control" required placeholder="Masukkan sandi lama...">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">Kata Sandi Baru</label>
+                                    <input type="password" id="pass-baru" class="form-control" required placeholder="Minimal 6 karakter...">
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold small">Konfirmasi Kata Sandi Baru</label>
+                                    <input type="password" id="pass-konfirm" class="form-control" required placeholder="Ulangi sandi baru...">
+                                </div>
+                                <button type="submit" class="btn btn-danger w-100 fw-bold"><i class="fa-solid fa-key"></i> PERBARUI KATA SANDI</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
