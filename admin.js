@@ -24,12 +24,18 @@ function switchSection(sectionId, element) {
     
     document.getElementById(sectionId).classList.add('active');
     element.classList.add('active');
+
+    // Trigger Grafik & Peta 
+    if (sectionId === 'sec-staf') muatAnalitik();
+    if (sectionId === 'sec-housekeeping') renderPetaKamarAsli();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     loadAdminData();
     populateStafDropdown();
     renderPetaKamarAsli();
+    muatDaftarStaf();
+    muatAnalitik();
 
     const btnTambahHK = document.getElementById('btn-tambah-hk');
     if (btnTambahHK) {
@@ -164,12 +170,23 @@ function renderPetaKamarAsli() {
             const roomsByFloor = {};
 
             data.data.forEach(rm => {
-                // Ambil 2 karakter pertama dari nomor kamar lalu ubah ke angka (03 -> 3, 14 -> 14)
-                let lantaiStr = rm.nomor_kamar.substring(0, 2);
-                let lantai = parseInt(lantaiStr, 10);
+                // PAKSA menjadi String terlebih dahulu agar aman dari crash tipe data
+                let nomorKamarStr = String(rm.nomor_kamar);
+                
+                // Jika nomor kamar di MySQL berupa angka biasa (misal 101, 205), gunakan cara ini:
+                // Jika panjangnya 3 digit, lantai adalah karakter pertama. Jika 4 digit, 2 karakter pertama.
+                let lantai = 1;
+                if (nomorKamarStr.length === 3) {
+                    lantai = parseInt(nomorKamarStr.substring(0, 1), 10); // 101 -> Lantai 1
+                } else if (nomorKamarStr.length === 4) {
+                    lantai = parseInt(nomorKamarStr.substring(0, 2), 10); // 1205 -> Lantai 12
+                } else {
+                    // Jika nomor kamarmu berformat teks "0301", logika aslimu di bawah ini akan aktif otomatis:
+                    lantai = parseInt(nomorKamarStr.substring(0, 2), 10);
+                }
                 
                 if (!roomsByFloor[lantai]) {
-                    roomsByFloor[lantai] = []; // Buat grup baru jika lantai belum ada
+                    roomsByFloor[lantai] = []; 
                 }
                 roomsByFloor[lantai].push(rm);
             });
@@ -539,6 +556,173 @@ async function muatDaftarStaf() {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Gagal terhubung ke database.</td></tr>';
     }
 }
+
+
+
+// ==========================================
+// ANALITIK: PIE CHART & HEATMAP (INTERAKTIF & TIME TRAVEL)
+// ==========================================
+let tanggalAnalitik = new Date(); 
+let pieChartInstance = null; 
+
+let currentTotalStaf = 1;
+let currentJumlahHari = 30;
+let dataBulananStatus = { 'Sakit': 0, 'Izin': 0, 'Mangkir': 0 };
+let dataHarianDetail = {}; 
+
+function geserBulan(arah) {
+    tanggalAnalitik.setMonth(tanggalAnalitik.getMonth() + arah);
+    muatAnalitik();
+}
+
+function updateTampilanPie(judul, dataStatus, pengaliHari) {
+    const ctx = document.getElementById('absensiPieChart');
+    const teksKosong = document.getElementById('teks-pie-kosong');
+    const centerLabel = document.getElementById('center-label-container');
+    const labelPersen = document.getElementById('label-persen-absen');
+    const judulEl = document.getElementById('judul-pie-chart');
+    const btnReset = document.getElementById('btn-reset-pie');
+    
+    if (judulEl) judulEl.innerText = judul;
+
+    if (judul === '(Bulan Ini)') {
+        if(btnReset) btnReset.classList.add('d-none');
+    } else {
+        if(btnReset) btnReset.classList.remove('d-none');
+    }
+
+    const totalAbsen = dataStatus['Sakit'] + dataStatus['Izin'] + dataStatus['Mangkir'];
+
+    if (totalAbsen === 0) {
+        if(ctx) ctx.style.display = 'none';
+        if(centerLabel) centerLabel.style.display = 'none';
+        if(teksKosong) teksKosong.classList.remove('d-none');
+    } else {
+        if(ctx) ctx.style.display = 'block';
+        if(centerLabel) centerLabel.style.display = 'block';
+        if(teksKosong) teksKosong.classList.add('d-none');
+
+        const rasio = (totalAbsen / (currentTotalStaf * pengaliHari)) * 100;
+        if(labelPersen) labelPersen.innerText = rasio.toFixed(1) + '%';
+
+        if (pieChartInstance) {
+            pieChartInstance.data.datasets[0].data = [dataStatus['Sakit'], dataStatus['Izin'], dataStatus['Mangkir']];
+            pieChartInstance.update();
+        }
+    }
+}
+
+function klikHeatmapHari(hari) {
+    const detailHariIni = dataHarianDetail[hari];
+    updateTampilanPie(`(Tgl ${hari})`, detailHariIni, 1);
+}
+
+function resetPieChart() {
+    updateTampilanPie('(Bulan Ini)', dataBulananStatus, currentJumlahHari);
+}
+
+async function muatAnalitik() {
+    const container = document.getElementById('heatmap-calendar');
+    const labelBulan = document.getElementById('label-bulan-analitik');
+    if (!container) return;
+
+    const tahun = tanggalAnalitik.getFullYear();
+    const bulan = tanggalAnalitik.getMonth(); 
+    if(labelBulan) labelBulan.innerText = tanggalAnalitik.toLocaleString('id-ID', { month: 'short', year: 'numeric' });
+
+    currentJumlahHari = new Date(tahun, bulan + 1, 0).getDate();
+    const hariPertama = new Date(tahun, bulan, 1).getDay(); 
+
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/api/presensi/rekap?bulan=${bulan + 1}&tahun=${tahun}`);
+        const result = await response.json();
+        
+        let dataHarianTotal = {};
+        
+        dataBulananStatus = { 'Sakit': 0, 'Izin': 0, 'Mangkir': 0 };
+        dataHarianDetail = {};
+        for(let i=1; i<=31; i++) { dataHarianDetail[i] = { 'Sakit': 0, 'Izin': 0, 'Mangkir': 0 }; }
+
+        if (result.status === 'success') {
+            currentTotalStaf = result.total_staf || 1;
+            
+            result.data_harian.forEach(item => { dataHarianTotal[item.hari] = item.total_absen; });
+            result.data_status.forEach(item => { dataBulananStatus[item.status] = item.jumlah; });
+            
+            if(result.data_harian_detail) {
+                result.data_harian_detail.forEach(item => {
+                    dataHarianDetail[item.hari][item.status] = item.jumlah;
+                });
+            }
+
+            // --- 1. LUKIS KOTAK HEATMAP ---
+            container.innerHTML = ''; 
+            const namaHari = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+            namaHari.forEach(hari => { container.innerHTML += `<div class="text-center small fw-bold text-muted mb-2">${hari}</div>`; });
+            for (let i = 0; i < hariPertama; i++) { container.innerHTML += `<div class="heatmap-box" style="visibility: hidden;"></div>`; }
+
+            for (let d = 1; d <= currentJumlahHari; d++) {
+                const jumlahAbsen = dataHarianTotal[d] || 0;
+                const persentase = (jumlahAbsen / currentTotalStaf) * 100;
+
+                let kelasWarna = 'legend-0';
+                if (jumlahAbsen > 0) {
+                    if (persentase >= 30) kelasWarna = 'legend-4';
+                    else if (persentase >= 20) kelasWarna = 'legend-3';
+                    else if (persentase >= 10) kelasWarna = 'legend-2';
+                    else kelasWarna = 'legend-1';
+                }
+
+                container.innerHTML += `
+                    <div class="heatmap-box ${kelasWarna}" 
+                         title="Tgl ${d}: ${jumlahAbsen} Absen (Klik untuk rincian)" 
+                         onclick="klikHeatmapHari(${d})">
+                        ${d}
+                    </div>
+                `;
+            }
+
+            // --- 2. INISIALISASI KANVAS PIE CHART ---
+            const ctx = document.getElementById('absensiPieChart');
+            if (pieChartInstance) { pieChartInstance.destroy(); }
+            
+            pieChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Sakit', 'Izin / Cuti', 'Mangkir'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#ffc107', '#0dcaf0', '#dc3545'],
+                        hoverOffset: 10,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, padding: 20, font: { size: 11, weight: 'bold' } } },
+                        tooltip: { callbacks: { label: function(c) { return ` ${c.label}: ${c.raw} Kejadian`; } } }
+                    },
+                    cutout: '75%' 
+                }
+            });
+
+            // --- 3. PASANG DATA SEBAGAI TAMPILAN AWAL ---
+            const waktuAsli = new Date();
+        
+            if (tahun === waktuAsli.getFullYear() && bulan === waktuAsli.getMonth()) {
+                klikHeatmapHari(waktuAsli.getDate());
+            } else {
+                resetPieChart();
+            }
+        }
+    } catch (error) {
+        console.error("Gagal memuat analitik:", error);
+    }
+}
+
+
 
 // ==========================================
 // JALANKAN SAAT HALAMAN DIMUAT

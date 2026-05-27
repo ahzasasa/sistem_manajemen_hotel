@@ -34,38 +34,53 @@ function updateJam() {
     document.getElementById('tanggal-hari-ini').innerText = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-async function catatPresensi(jenis) {
+async function catatPresensi(tipe) {
     try {
         const response = await fetch('http://127.0.0.1:5000/api/presensi', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_staf: idStafAktif, jenis: jenis })
+            body: JSON.stringify({ 
+                id_staf: idStafAktif, 
+                tipe_absen: tipe 
+            })
         });
         
-        const data = await response.json();
+        const result = await response.json();
         
-        if (data.status === 'success') {
+        if (result.status === 'success') {
             Swal.fire({
-                title: `Presensi ${jenis} Berhasil!`,
-                text: `Waktu Anda telah dicatat oleh sistem.`,
+                title: `Presensi ${tipe} Berhasil!`,
+                text: 'Waktu Anda telah dicatat oleh sistem.',
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false
             });
-
-            // Ubah state tombol
-            if(jenis === 'Masuk') {
+            
+            // --- LOGIKA BUKA-TUTUP TOMBOL (UPDATE) ---
+            if (tipe === 'Masuk') {
+                // 1. Kunci tombol Clock-In
                 document.getElementById('btn-masuk').disabled = true;
-                document.getElementById('btn-pulang').disabled = false;
-            } else {
-                document.getElementById('btn-masuk').disabled = false;
+                
+                // 2. Kunci juga tombol Sakit & Izin agar tidak dobel status
+                const btnSakit = document.getElementById('btn-sakit');
+                const btnIzin = document.getElementById('btn-izin');
+                if (btnSakit) btnSakit.disabled = true;
+                if (btnIzin) btnIzin.disabled = true;
+                
+                // 3. BUKA gembok Clock-Out
+                document.getElementById('btn-pulang').disabled = false; 
+
+            } else if (tipe === 'Pulang') {
+                // Jika sudah pulang, kunci tombol Clock-Out
                 document.getElementById('btn-pulang').disabled = true;
             }
             
-            // Segarkan tabel riwayat secara otomatis
-            muatRiwayatPresensi();
+            // Perbarui tabel riwayat secara otomatis
+            if (typeof muatRiwayatPresensi === "function") {
+                muatRiwayatPresensi();
+            }
         } else {
-            Swal.fire('Gagal!', data.message, 'warning');
+            Swal.fire('Gagal!', result.message, 'warning');
         }
     } catch (error) {
         Swal.fire('Error!', 'Koneksi ke server database gagal.', 'error');
@@ -181,42 +196,71 @@ function logout() {
 
 
 // ==========================================
-// 5. RIWAYAT PRESENSI
+// 5. FUNGSI MEMUAT RIWAYAT PRESENSI DI TABEL
 // ==========================================
 async function muatRiwayatPresensi() {
-    const tbody = document.getElementById('table-presensi-body');
-    if(!tbody) return;
+    // Sesuaikan ID tbody dengan yang ada di HTML-mu (asumsi: tbody-riwayat)
+    const tbody = document.querySelector('table tbody'); 
+    if (!tbody) return;
 
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/presensi/${idStafAktif}`);
+        // Asumsi endpoint API-mu untuk mengambil riwayat berdasarkan ID staf
+        const response = await fetch(`http://127.0.0.1:5000/api/presensi/riwayat/${idStafAktif}`);
         const result = await response.json();
 
         if (result.status === 'success') {
-            tbody.innerHTML = ''; 
-            
+            tbody.innerHTML = ''; // Bersihkan tabel
+
             if (result.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-muted py-4">Belum ada catatan presensi.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Belum ada riwayat presensi.</td></tr>';
                 return;
             }
 
-            result.data.forEach(row => {
-                // Beri warna lencana (badge) yang cantik
-                const badgeMasuk = row.waktu_masuk ? `<span class="badge bg-success"><i class="fa-solid fa-arrow-right-to-bracket"></i> ${row.waktu_masuk}</span>` : '-';
-                const badgePulang = row.waktu_pulang ? `<span class="badge bg-danger"><i class="fa-solid fa-arrow-right-from-bracket"></i> ${row.waktu_pulang}</span>` : '-';
+            result.data.forEach(item => {
+                // 1. TANGKAP NAMA KOLOM DENGAN TEPAT (Cocokkan dengan nama di MySQL-mu)
+                const waktuMasuk = item.waktu_masuk || item.jam_masuk || '-';
+                const waktuPulang = item.waktu_pulang || item.jam_keluar || '-';
+
+                // 2. HITUNG DURASI KERJA OTOMATIS
+                let teksDurasi = '<span class="text-muted fw-bold">Belum Selesai</span>';
                 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="fw-bold text-secondary">${row.tanggal_format}</td>
-                    <td>${badgeMasuk}</td>
-                    <td>${badgePulang}</td>
-                    <td class="fw-bold">${row.durasi}</td>
-                    <td><span class="badge bg-primary">${row.status}</span></td>
+                if (waktuMasuk !== '-' && waktuPulang !== '-') {
+                    // Ubah format string jam (HH:MM:SS) menjadi objek Date untuk dihitung
+                    const masuk = new Date(`1970-01-01T${waktuMasuk}`);
+                    const pulang = new Date(`1970-01-01T${waktuPulang}`);
+                    const selisihMs = pulang - masuk; // Hasilnya dalam milidetik
+
+                    // Konversi ke Jam dan Menit
+                    const jam = Math.floor(selisihMs / (1000 * 60 * 60));
+                    const menit = Math.floor((selisihMs % (1000 * 60 * 60)) / (1000 * 60));
+                    teksDurasi = `<span class="fw-bold text-dark">${jam} Jam ${menit} Menit</span>`;
+                }
+
+                // 3. ATUR WARNA BADGE STATUS
+                let badgeStatus = 'bg-primary';
+                if (item.status === 'Sakit') badgeStatus = 'bg-warning text-dark';
+                if (item.status === 'Izin') badgeStatus = 'bg-info text-dark';
+                if (item.status === 'Mangkir') badgeStatus = 'bg-danger';
+
+                // 4. LUKIS KE DALAM TABEL
+                // Format tanggal bisa disesuaikan, untuk sementara kita cetak langsung
+                tbody.innerHTML += `
+                    <tr class="align-middle text-center">
+                        <td class="fw-bold">${item.tanggal}</td>
+                        <td>
+                            ${waktuMasuk !== '-' ? `<span class="badge bg-success py-2 px-3"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i> ${waktuMasuk}</span>` : '-'}
+                        </td>
+                        <td>
+                            ${waktuPulang !== '-' ? `<span class="badge bg-danger py-2 px-3"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i> ${waktuPulang}</span>` : '-'}
+                        </td>
+                        <td>${teksDurasi}</td>
+                        <td><span class="badge ${badgeStatus} py-1 px-2">${item.status || 'Hadir'}</span></td>
+                    </tr>
                 `;
-                tbody.appendChild(tr);
             });
         }
     } catch (error) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-danger py-4">Gagal memuat data dari server.</td></tr>';
+        console.error("Gagal memuat riwayat presensi:", error);
     }
 }
 

@@ -115,51 +115,136 @@ body {
 /* ==========================================
    VISUALISASI GRID KAMAR (HOUSEKEEPING)
    ========================================== */
-.room-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-    gap: 10px;
-    padding: 10px 0;
-    /* Hapus max-height dan overflow agar tampil full */
-}
-
-/* Desain Pemisah/Sekat Antar Lantai */
-.floor-divider {
-    background-color: #f8f9fa;
-    padding: 8px 15px;
-    margin: 20px 0 10px 0;
-    border-left: 4px solid var(--hotel-gold);
-    font-weight: bold;
-    color: var(--hotel-green);
-    border-radius: 4px;
-    font-size: 15px;
-}
-
-.room-box {
-    height: 50px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-size: 12px;
-    font-weight: bold;
-    border-radius: 6px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.room-box:hover { transform: scale(1.05); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-
-/* Warna Status Kamar */
-.rm-clean { background-color: #198754; }       /* Hijau - Bersih */
-.rm-occupied { background-color: #0d6efd; }    /* Biru - Terisi (Check-In) */
-.rm-booked { background-color: #6f42c1; }      /* Ungu - Dipesan (Belum Check-In) */
-.rm-dirty { background-color: #ffc107; color: #000; } /* Kuning - Kotor */
-.rm-repair { background-color: #6c757d; }      /* Abu-abu - Perbaikan */
+   /* --- GRID PEMBUNGKUS LANTAI --- */
+   .floor-divider {
+       font-weight: bold;
+       color: #495057;
+       background-color: #f8f9fa;
+       padding: 8px 12px;
+       border-radius: 6px;
+       margin-top: 20px;
+       margin-bottom: 10px;
+       border-left: 4px solid #198754;
+       width: 100%;
+   }
+   
+   .room-grid {
+       display: flex;
+       flex-wrap: wrap;
+       gap: 12px;
+       margin-bottom: 20px;
+   }
+   
+   /* --- UKURAN DAN WARNA KOTAK KAMAR --- */
+   .room-box {
+       width: 75px;
+       height: 75px;
+       border-radius: 8px;
+       display: flex;
+       flex-direction: column;
+       align-items: center;
+       justify-content: center;
+       font-weight: bold;
+       font-size: 0.9rem;
+       color: white;
+       box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+       transition: transform 0.15s ease;
+       cursor: pointer;
+   }
+   
+   .room-box:hover {
+       transform: translateY(-4px);
+   }
+   
+   /* Pemetaan Status Visual dari Query SQL */
+   .rm-clean { background-color: #198754 !important; }    /* Hijau */
+   .rm-occupied { background-color: #0d6efd !important; } /* Biru */
+   .rm-booked { background-color: #6f42c1 !important; }   /* Ungu */
+   .rm-dirty { background-color: #ffc107 !important; color: #212529 !important; }   /* Kuning */
+   .rm-repair { background-color: #6c757d !important; }  /* Abu-abu */
 
 /* ==========================================
    PENGENDALI TAMPILAN SECTION
    ========================================== */
 .admin-section { display: none; }
 .admin-section.active { display: block; }
+
+
+/* ========================================== */
+/* KALENDER HEATMAP PRESENSI                  */
+/* ========================================== */
+#heatmap-calendar {
+    display: grid;
+    /* Kunci lebar kolom menjadi 45px dan posisikan di tengah */
+    grid-template-columns: repeat(7, 45px); 
+    justify-content: center;
+    gap: 8px;
+}
+
+.heatmap-box {
+    width: 45px;
+    height: 45px;
+    border-radius: 4px;
+    background-color: #ebedf0; /* Warna dasar (0 Absen) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.heatmap-box:hover {
+    transform: scale(1.15);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+/* Tingkatan Warna Absen (Abu-abu -> Kuning -> Merah) */
+.legend-0 { background-color: #ebedf0; color: #a1a1a1; } /* 0 Absen */
+.legend-1 { background-color: #ffe066; color: #7a5a00; } /* Sedikit Absen */
+.legend-2 { background-color: #ff9933; color: white; }   
+.legend-3 { background-color: #ff4d4d; color: white; }   
+.legend-4 { background-color: #cc0000; color: white; }   /* Banyak Absen */
+
+.legend-box {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+    margin: 0 4px;
+}
+
+
+/* Container pembungkus Chart agar bisa menaruh teks di tengah */
+.chart-wrapper {
+    position: relative;
+    height: 250px; /* Ukuran diperbesar dari 180px */
+    width: 100%;
+    margin: 0 auto;
+}
+
+.chart-center-label {
+    position: absolute;
+    top: 44%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none; 
+}
+
+#label-persen-absen {
+    display: block;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #dc3545; /* Warna merah agar kontras */
+    line-height: 1;
+}
+
+.chart-center-label small {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}

@@ -227,84 +227,137 @@
             </div>
 
             <div class="row">
-                <div class="col-md-5">
-                    <div class="table-container">
-                        <h5 class="mb-3"><i class="fa-solid fa-user-plus text-primary"></i> Registrasi Staf Baru</h5>
-                        
-                        <form id="form-tambah-staf">
-                            <div class="mb-3">
-                                <label class="form-label font-weight-bold">Nama Lengkap</label>
-                                <input type="text" id="staf-nama" class="form-control" placeholder="Masukkan nama staf..." required>
-                            </div>
+                
+                <div class="col-12 col-lg-5 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h5 class="mb-4"><i class="fa-solid fa-user-plus text-primary"></i> Registrasi Staf Baru</h5>
                             
-                            <div class="mb-3">
-                                <label class="form-label font-weight-bold">Posisi / Jabatan</label>
-                                <select class="form-select" id="staf-posisi" required>
-                                    <option value="" disabled selected>-- Pilih Posisi --</option>
-                                    <option value="1">Housekeeping</option>
-                                    <option value="2">Front Office</option>
-                                    <option value="3">Admin / Back Office</option>
-                                    <option value="4">Manager</option>
-                                </select>
-                            </div>
+                            <form id="form-tambah-staf">
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold">Nama Lengkap</label>
+                                    <input type="text" id="staf-nama" class="form-control" placeholder="Masukkan nama staf..." required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold">Posisi / Jabatan</label>
+                                    <select class="form-select" id="staf-posisi" required>
+                                        <option value="" disabled selected>-- Pilih Posisi --</option>
+                                        <option value="1">Housekeeping</option>
+                                        <option value="2">Front Office</option>
+                                        <option value="3">Admin / Back Office</option>
+                                        <option value="4">Manager</option>
+                                    </select>
+                                </div>
 
-                            <div class="mb-3">
-                                <label class="form-label font-weight-bold">Nomor Telepon</label>
-                                <input type="text" id="staf-telepon" class="form-control" placeholder="Contoh: 08123456789" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label font-weight-bold">Username Akses</label>
-                                <input type="text" id="staf-username" class="form-control" placeholder="Username untuk login" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label font-weight-bold">Password Akses</label>
-                                <input type="password" id="staf-password" class="form-control" placeholder="Password untuk login" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100 font-weight-bold">
-                                <i class="fa-solid fa-save"></i> DAFTARKAN STAF
-                            </button>
-                        </form>
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold">Nomor Telepon</label>
+                                    <input type="text" id="staf-telepon" class="form-control" placeholder="Contoh: 08123456789" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold">Username Akses</label>
+                                    <input type="text" id="staf-username" class="form-control" placeholder="Username untuk login" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold">Password Akses</label>
+                                    <input type="password" id="staf-password" class="form-control" placeholder="Password untuk login" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 font-weight-bold mt-2">
+                                    <i class="fa-solid fa-save"></i> DAFTARKAN STAF
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row mt-4 mb-5">
-                    <div class="col-12">
-                        <div class="card border-0 shadow-sm">
+                <div class="col-12 col-lg-7 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-4">
                             
-                            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-users text-primary"></i> Data Operasional & Kehadiran Hari Ini</h5>
-                                <div class="input-group w-25">
-                                    <input type="text" class="form-control form-control-sm" placeholder="Cari staf...">
-                                    <button class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-magnifying-glass"></i></button>
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-chart-pie text-info"></i> Analitik Ketidakhadiran</h5>
+                                <div class="btn-group btn-group-sm shadow-sm">
+                                    <button class="btn btn-light border" onclick="geserBulan(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                                    <button class="btn btn-white border fw-bold px-3" id="label-bulan-analitik" disabled>Memuat...</button>
+                                    <button class="btn btn-light border" onclick="geserBulan(1)"><i class="fa-solid fa-chevron-right"></i></button>
                                 </div>
                             </div>
                             
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0">
-                                        <thead class="table-light text-muted small text-uppercase">
-                                            <tr>
-                                                <th class="ps-4">ID Staf</th>
-                                                <th>Karyawan & Kontak</th>
-                                                <th>Posisi</th>
-                                                <th>Clock-In</th>
-                                                <th>Clock-Out</th>
-                                                <th>Status</th>
-                                                <th class="pe-4 text-end">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="table-karyawan-body">
-                                            <tr><td colspan="7" class="text-center text-muted py-4">Memuat data operasional...</td></tr>
-                                        </tbody>
-                                    </table>
+                            <div class="row align-items-center">
+                                <div class="col-md-5 text-center border-end">
+                                    <div class="d-flex justify-content-between align-items-center mb-3 px-3">
+                                        <p class="text-muted small fw-bold mb-0">Rasio Ketidakhadiran <span id="judul-pie-chart" class="text-primary">(Bulan Ini)</span></p>
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 d-none" id="btn-reset-pie" onclick="resetPieChart()" style="font-size: 0.7rem;"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                                    </div>
+                                    
+                                    <div class="chart-wrapper">
+                                        <canvas id="absensiPieChart"></canvas>
+                                        
+                                        <div class="chart-center-label" id="center-label-container">
+                                            <span id="label-persen-absen">0%</span>
+                                        </div>
+                                    </div>
+
+                                    <p id="teks-pie-kosong" class="text-muted small mt-3 d-none">Data bersih, tidak ada absen!</p>
+                                </div>
+                                
+                                <div class="col-md-7 ps-4">
+                                    <p class="text-muted small fw-bold mb-2 text-center">Intensitas Harian</p>
+                                    <div id="heatmap-calendar" class="justify-content-center"></div>
+                                    
+                                    <div class="d-flex align-items-center justify-content-center mt-3 small text-muted" style="font-size: 0.7rem;">
+                                        <span class="me-2">Hadir Semua</span>
+                                        <div class="legend-box legend-0"></div>
+                                        <div class="legend-box legend-1"></div>
+                                        <div class="legend-box legend-2"></div>
+                                        <div class="legend-box legend-3"></div>
+                                        <div class="legend-box legend-4"></div>
+                                        <span class="ms-2">Banyak Absen</span>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <div class="card-footer bg-white border-top py-2 d-flex justify-content-end">
-                                <span class="text-muted small align-self-center me-3">Total: <span id="total-staf">0</span> Staf</span>
-                            </div>
-            
+
                         </div>
+                    </div>
+                </div>
+                
+            </div> <div class="row mt-2 mb-5">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        
+                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold"><i class="fa-solid fa-users text-primary"></i> Data Operasional & Kehadiran Hari Ini</h5>
+                            <div class="input-group w-25">
+                                <input type="text" class="form-control form-control-sm" placeholder="Cari staf...">
+                                <button class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-magnifying-glass"></i></button>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light text-muted small text-uppercase">
+                                        <tr>
+                                            <th class="ps-4">ID Staf</th>
+                                            <th>Karyawan & Kontak</th>
+                                            <th>Posisi</th>
+                                            <th>Clock-In</th>
+                                            <th>Clock-Out</th>
+                                            <th>Status</th>
+                                            <th class="pe-4 text-end">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-karyawan-body">
+                                        <tr><td colspan="7" class="text-center text-muted py-4">Memuat data operasional...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-white border-top py-2 d-flex justify-content-end">
+                            <span class="text-muted small align-self-center me-3">Total: <span id="total-staf">0</span> Staf</span>
+                        </div>
+        
                     </div>
                 </div>
             </div>
@@ -342,6 +395,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>

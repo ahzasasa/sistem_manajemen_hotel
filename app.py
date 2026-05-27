@@ -3,6 +3,7 @@ from datetime import datetime
 import mysql.connector
 from flask_cors import CORS
 from datetime import timedelta
+from datetime import datetime
 
 app = Flask(__name__)
 # Mengaktifkan CORS agar frontend (HTML/JS) diizinkan mengambil data dari backend Python
@@ -657,10 +658,9 @@ def get_status_kamar():
                 k.id_kamar, 
                 k.nomor_kamar,
                 CASE 
-                    -- 1. Kondisi Fisik Rusak
-                    WHEN k.status_kondisi = 'Perbaikan' THEN 'rm-repair'
+                    -- Ubah k.status_kondisi menjadi k.status
+                    WHEN k.status = 'Perbaikan' THEN 'rm-repair'
                     
-                    -- 2. Sedang Dihuni (Tamu sudah Check-In)
                     WHEN EXISTS (
                         SELECT 1 FROM detail_reservasi dr
                         JOIN reservasi r ON dr.id_reservasi = r.id_reservasi
@@ -668,7 +668,6 @@ def get_status_kamar():
                         AND r.status_pesanan = 'Aktif'
                     ) THEN 'rm-occupied'
 
-                    -- 3. Sudah Dipesan tapi Belum Check-In (Status: Menunggu)
                     WHEN EXISTS (
                         SELECT 1 FROM detail_reservasi dr
                         JOIN reservasi r ON dr.id_reservasi = r.id_reservasi
@@ -676,7 +675,6 @@ def get_status_kamar():
                         AND r.status_pesanan = 'Menunggu'
                     ) THEN 'rm-booked'
                     
-                    -- 4. Jeda Prosedur 24 Jam setelah Check-Out
                     WHEN EXISTS (
                         SELECT 1 FROM detail_reservasi dr
                         JOIN reservasi r ON dr.id_reservasi = r.id_reservasi
@@ -685,7 +683,6 @@ def get_status_kamar():
                         AND r.tanggal_keluar > DATE_SUB(NOW(), INTERVAL 24 HOUR)
                     ) THEN 'rm-dirty'
                     
-                    -- 5. Bersih dan Tersedia
                     ELSE 'rm-clean'
                 END as status_visual
             FROM kamar k
@@ -1042,7 +1039,9 @@ def selesai_tugas():
 def catat_presensi():
     data = request.json
     id_staf = data.get('id_staf')
-    jenis = data.get('jenis') # 'Masuk' atau 'Pulang'
+    
+    # PERBAIKAN 1: Tangkap 'jenis' ATAU 'tipe_absen' agar cocok dengan versi JS manapun
+    jenis = data.get('jenis') or data.get('tipe_absen') 
     
     conn = None; cursor = None
     try:
@@ -1056,17 +1055,25 @@ def catat_presensi():
         if jenis == 'Masuk':
             if absen_hari_ini:
                 return jsonify({"status": "error", "message": "Anda sudah Clock-In hari ini!"})
-            # Insert data baru dengan jam saat ini
-            cursor.execute("INSERT INTO presensi (id_staf, tanggal, waktu_masuk) VALUES (%s, CURDATE(), CURTIME())", (id_staf,))
+            
+            # PERBAIKAN 2: Tambahkan kolom status = 'Hadir' agar Heatmap Admin berfungsi
+            cursor.execute("""
+                INSERT INTO presensi (id_staf, tanggal, waktu_masuk, status) 
+                VALUES (%s, CURDATE(), CURTIME(), 'Hadir')
+            """, (id_staf,))
             
         elif jenis == 'Pulang':
             if not absen_hari_ini:
                 return jsonify({"status": "error", "message": "Anda belum Clock-In hari ini!"})
-            if absen_hari_ini['waktu_pulang']:
+            if absen_hari_ini.get('waktu_pulang'):
                 return jsonify({"status": "error", "message": "Anda sudah Clock-Out hari ini!"})
             
             # Update jam pulang untuk hari ini
-            cursor.execute("UPDATE presensi SET waktu_pulang = CURTIME() WHERE id_staf = %s AND tanggal = CURDATE()", (id_staf,))
+            cursor.execute("""
+                UPDATE presensi 
+                SET waktu_pulang = CURTIME() 
+                WHERE id_staf = %s AND tanggal = CURDATE()
+            """, (id_staf,))
             
         conn.commit()
         return jsonify({"status": "success"})
@@ -1274,7 +1281,146 @@ def ajukan_izin():
         if conn: conn.close()
         
         
-                                                                                 
+# ==========================================
+# ENDPOINT ANALITIK PRESENSI (HISTORIS)
+# ==========================================
+@app.route('/api/presensi/rekap', methods=['GET'])
+def get_rekap_heatmap():
+    bulan_req = request.args.get('bulan', default=datetime.now().month, type=int)
+    tahun_req = request.args.get('tahun', default=datetime.now().year, type=int)
+    
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("SELECT COUNT(*) as total FROM staf")
+        total_staf = cursor.fetchone()['total']
+        
+        # 1. Total absen per hari (Untuk warna Heatmap)
+        cursor.execute("""
+            SELECT DAY(tanggal) as hari, COUNT(*) as total_absen 
+            FROM presensi 
+            WHERE MONTH(tanggal) = %s AND YEAR(tanggal) = %s AND status != 'Hadir'
+            GROUP BY DAY(tanggal)
+        """, (bulan_req, tahun_req))
+        rekap_harian = cursor.fetchall()
+        
+        # 2. Total distribusi bulanan (Untuk Pie Chart awal)
+        cursor.execute("""
+            SELECT status, COUNT(*) as jumlah 
+            FROM presensi 
+            WHERE MONTH(tanggal) = %s AND YEAR(tanggal) = %s AND status != 'Hadir'
+            GROUP BY status
+        """, (bulan_req, tahun_req))
+        rekap_status = cursor.fetchall()
+
+        # 3. BARU: Rincian status spesifik PER HARI (Untuk Pie Chart saat diklik)
+        cursor.execute("""
+            SELECT DAY(tanggal) as hari, status, COUNT(*) as jumlah 
+            FROM presensi 
+            WHERE MONTH(tanggal) = %s AND YEAR(tanggal) = %s AND status != 'Hadir'
+            GROUP BY DAY(tanggal), status
+        """, (bulan_req, tahun_req))
+        rekap_harian_detail = cursor.fetchall()
+
+        return jsonify({
+            "status": "success", 
+            "total_staf": total_staf, 
+            "data_harian": rekap_harian,
+            "data_status": rekap_status,
+            "data_harian_detail": rekap_harian_detail
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+                                                                                         
+
+# ==========================================
+# ENDPOINT HOUSEKEEPING (PETA KAMAR)
+# ==========================================
+@app.route('/api/kamar', methods=['GET'])
+def get_semua_kamar():
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Mengambil semua kamar diurutkan dari nomor terkecil
+        cursor.execute("SELECT * FROM kamar ORDER BY nomor_kamar ASC")
+        kamar_list = cursor.fetchall()
+        
+        return jsonify({"status": "success", "data": kamar_list})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+# ==========================================
+# ENDPOINT DROPDOWN STAF HOUSEKEEPING
+# ==========================================
+@app.route('/api/staf-housekeeping', methods=['GET'])
+def get_staf_hk():
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Menggunakan SELECT * agar tidak terbentur masalah nama kolom (nama_staf vs nama_lengkap)
+        cursor.execute("SELECT * FROM staf WHERE id_posisi = 1")
+        staf_hk = cursor.fetchall()
+        
+        return jsonify({"status": "success", "data": staf_hk})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+
+# ==========================================
+# ENDPOINT RIWAYAT PRESENSI STAF (PORTAL)
+# ==========================================
+@app.route('/api/presensi/riwayat/<int:id_staf>', methods=['GET'])
+def get_riwayat_presensi_portal(id_staf):
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Ambil data presensi dari yang terbaru
+        cursor.execute("""
+            SELECT 
+                DATE_FORMAT(tanggal, '%d %M %Y') as tanggal, 
+                waktu_masuk, 
+                waktu_pulang, 
+                status 
+            FROM presensi 
+            WHERE id_staf = %s 
+            ORDER BY tanggal DESC
+        """, (id_staf,))
+        riwayat = cursor.fetchall()
+        
+        # Format tipe data 'waktu' agar aman dibaca oleh JSON/JavaScript
+        for baris in riwayat:
+            if baris['waktu_masuk']:
+                baris['waktu_masuk'] = str(baris['waktu_masuk'])
+            if baris['waktu_pulang']:
+                baris['waktu_pulang'] = str(baris['waktu_pulang'])
+                
+        return jsonify({"status": "success", "data": riwayat})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+                
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================
