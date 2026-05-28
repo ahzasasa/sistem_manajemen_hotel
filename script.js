@@ -11,11 +11,12 @@ const dataPelengkap = {
 // ==========================================
 // VARIABEL GLOBAL 
 // ==========================================
+let originalRoomData = [];
 let globalRoomData = []; 
 let currentPage = 1;     
 const itemsPerPage = 4;
 let hargaKamarGlobal = 0; 
-let hargaFasilitasGlobal = 0; // Tambahan Baru
+let hargaFasilitasGlobal = 0; 
 
 const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
@@ -38,20 +39,25 @@ function getBaseRoomName(namaTipe) {
 document.addEventListener('DOMContentLoaded', function() {
     const currentPath = window.location.pathname;
     if (currentPath.includes('detail.html')) { loadDetailKamar(); }
-    else if (currentPath.includes('detail-fasilitas.html')) { loadDetailFasilitas(); } // Rute Baru
+    else if (currentPath.includes('detail-fasilitas.html')) { loadDetailFasilitas(); } 
     else if (currentPath.includes('kamar.html')) { loadDataKamarGrid(); }
     else if (currentPath.includes('cek-pesanan.html')) { initCekPesanan(); }
     else if (currentPath.includes('fasilitas.html')) { /* Statis, tidak butuh JS spesifik */ }
-    else { loadDataBeranda(); initSearchEngine(); }
+    else { loadDataBeranda(); }
 });
 
 // ==========================================
-// FUNGSI 1: BERANDA & PENCARIAN (ASLI)
+// FUNGSI 1: BERANDA & PENCARIAN (DINAMIS DARI DATABASE)
 // ==========================================
 function loadDataBeranda() {
     fetch('http://127.0.0.1:5000/api/tipe-kamar')
         .then(response => response.json())
-        .then(data => { globalRoomData = data; currentPage = 1; renderKamarCards(); })
+        .then(data => { 
+            originalRoomData = data.data || data;
+            globalRoomData = [...originalRoomData];
+            currentPage = 1; 
+            renderKamarCards(); 
+        })
         .catch(error => document.getElementById('kamar-container').innerHTML = '<h3 style="color:red; text-align:center;">Gagal terhubung ke Database.</h3>');
 }
 
@@ -71,7 +77,11 @@ function initSearchEngine() {
         document.getElementById('kamar-container').innerHTML = '<p style="text-align: center; padding: 50px;">Mencari kamar yang tersedia...</p>';
         fetch(`http://127.0.0.1:5000/api/cari-kamar?checkin=${checkin}&checkout=${checkout}&kapasitas=${kapasitas}`)
             .then(response => response.json())
-            .then(data => { globalRoomData = data; currentPage = 1; renderKamarCards(); })
+            .then(data => { 
+                originalRoomData = data.data || data;
+                globalRoomData = data;
+                currentPage = 1;
+                renderKamarCards(); })
             .catch(error => document.getElementById('kamar-container').innerHTML = '<h3 style="color:red; text-align:center;">Terjadi kesalahan sistem.</h3>');
     });
 }
@@ -94,9 +104,17 @@ function renderKamarCards() {
         const baseName = getBaseRoomName(kamar.nama_tipe);
         const infoTambahan = dataPelengkap[baseName] || { img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80', desc: 'Kamar eksklusif persembahan Hotel Reservasi.' };
         
-        let fasilitasSingkat = `Luas ${kamar.kapasitas * 15} sqm<br>AC & TV LED 40"<br>Wi-Fi Gratis<br>Pembuat Kopi & Teh`;
-        if(kamar.nama_tipe.includes('Breakfast')) fasilitasSingkat += `<br><span style="color: #154230; font-weight: bold; display: block; margin-top: 5px;">🍳 Termasuk Sarapan Pagi</span>`;
-        if(kamar.nama_tipe.includes('Free Cancellation')) fasilitasSingkat += `<br><span style="color: #0D47A1; font-weight: bold; display: block; margin-top: 5px;">🛡️ Pembatalan Gratis (Fleksibel)</span>`;
+        // --- LOGIKA FASILITAS DINAMIS DARI DATABASE ---
+        const fasilitasArray = kamar.fasilitas ? kamar.fasilitas.split(',') : [];
+        let fasilitasSingkat = '';
+        fasilitasArray.forEach(item => {
+            fasilitasSingkat += `✔️ ${item.trim()}<br>`;
+        });
+        
+        if (fasilitasSingkat === '') {
+            fasilitasSingkat = 'Fasilitas belum ditambahkan.<br>';
+        }
+        // --- BATAS LOGIKA DINAMIS ---
 
         const cardHTML = `
             <div class="horizontal-card">
@@ -151,14 +169,17 @@ window.changePage = function(page) {
 }
 
 // ==========================================
-// FUNGSI 2: HALAMAN KAMAR GRID (ASLI)
+// FUNGSI 2: HALAMAN KAMAR GRID
 // ==========================================
 function loadDataKamarGrid() {
     fetch('http://127.0.0.1:5000/api/tipe-kamar').then(res => res.json()).then(data => {
+        // Ambil array data (mengatasi perbedaan struktur JSON API)
+        const roomArray = data.data || data; 
         const gridContainer = document.getElementById('kamar-grid-container');
         if (!gridContainer) return;
         gridContainer.innerHTML = ''; 
-        data.forEach(kamar => {
+        
+        roomArray.forEach(kamar => {
             const baseName = getBaseRoomName(kamar.nama_tipe);
             const infoTambahan = dataPelengkap[baseName] || { img: '', desc: '' };
             gridContainer.innerHTML += `
@@ -178,7 +199,7 @@ function loadDataKamarGrid() {
 }
 
 // ==========================================
-// FUNGSI 3: DETAIL KAMAR & BOOKING (UPDATE V2)
+// FUNGSI 3: DETAIL KAMAR & BOOKING
 // ==========================================
 function loadDetailKamar() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -189,7 +210,8 @@ function loadDetailKamar() {
     fetch('http://127.0.0.1:5000/api/tipe-kamar')
         .then(res => res.json())
         .then(data => {
-            const kamar = data.find(k => k.id_tipe == roomId);
+            const roomArray = data.data || data;
+            const kamar = roomArray.find(k => k.id_tipe == roomId);
             if (kamar) {
                 hargaKamarGlobal = kamar.harga_per_malam; 
                 
@@ -199,8 +221,18 @@ function loadDetailKamar() {
                 document.getElementById('detail-nama').textContent = kamar.nama_tipe;
                 document.getElementById('detail-img').src = infoTambahan.img;
                 document.getElementById('detail-kapasitas').textContent = `${kamar.kapasitas} Guest Maximum`;
-                document.getElementById('detail-deskripsi').textContent = infoTambahan.desc;
+                document.getElementById('detail-deskripsi').textContent = kamar.deskripsi || infoTambahan.desc; // Ambil deskripsi asli jika ada
                 document.getElementById('detail-harga').textContent = formatRupiah(kamar.harga_per_malam) + ' / Malam';
+
+                // --- Tampilkan Fasilitas Lengkap di Detail ---
+                const wadahFasilitas = document.getElementById('detail-fasilitas');
+                if (wadahFasilitas && kamar.fasilitas) {
+                    wadahFasilitas.innerHTML = `<div class="amenity-item">🛏️ ${kamar.kapasitas} Guest Maximum</div>`;
+                    const listFasilitas = kamar.fasilitas.split(',');
+                    listFasilitas.forEach(item => {
+                        wadahFasilitas.innerHTML += `<div class="amenity-item">✔️ ${item.trim()}</div>`;
+                    });
+                }
 
                 hitungTotalKamar(); 
 
@@ -220,7 +252,6 @@ function loadDetailKamar() {
                             btnSubmit.textContent = 'KONFIRMASI PESANAN'; btnSubmit.disabled = false; return; 
                         }
 
-                        // PAYLOAD SUDAH BENAR DI SINI (SATU SAJA, TIDAK DOBEL)
                         const payload = {
                             id_tipe: kamar.id_tipe,
                             nama: document.getElementById('book-nama').value,
@@ -290,7 +321,7 @@ function hitungTotalKamar() {
 }
 
 // ==========================================
-// FUNGSI 4: DETAIL FASILITAS & BOOKING (BARU)
+// FUNGSI 4: DETAIL FASILITAS & BOOKING
 // ==========================================
 const gambarFasilitas = {
     1: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80', 
@@ -357,7 +388,6 @@ function loadDetailFasilitas() {
                 const result = await res.json();
                 
                 if (result.status === 'success') {
-                    // Pop-up Sukses ala SweetAlert2
                     Swal.fire({
                         title: 'Reservasi Berhasil!',
                         text: `Fasilitas berhasil dipesan dengan ID: ${result.id_reservasi}`,
@@ -365,16 +395,13 @@ function loadDetailFasilitas() {
                         confirmButtonColor: '#198754',
                         confirmButtonText: 'Lihat E-Voucher'
                     }).then(() => {
-                        // Arahkan ke E-Voucher dengan membawa ID Reservasi Fasilitas dan Email
                         window.location.href = `voucher.html?id=${result.id_reservasi}&email=${payload.email}`; 
                     });
                 } else {
-                    // Pop-up Gagal
                     Swal.fire('Gagal!', "Pesan: " + result.message, 'error');
                     btn.textContent = 'KONFIRMASI RESERVASI'; btn.disabled = false;
                 }
             } catch (err) {
-                // Pop-up Error Jaringan
                 Swal.fire('Error!', "Kesalahan jaringan atau server.", 'error');
                 btn.textContent = 'KONFIRMASI RESERVASI'; btn.disabled = false;
             }
@@ -389,20 +416,16 @@ function hitungTotalFasilitas() {
     
     if (pax && pax > 0 && totalDisplay) {
         const total = pax * hargaFasilitasGlobal;
-        
-        // Menampilkan langsung total akhirnya saja tanpa rincian perkalian
         totalDisplay.value = formatRupiah(total);
-        
         if (totalValue) totalValue.value = total;
     } else if (totalDisplay) {
-        // Jika input dikosongkan, kembalikan tampilan ke Rp 0
         totalDisplay.value = "Rp 0";
         if (totalValue) totalValue.value = 0;
     }
 }
 
 // ==========================================
-// FUNGSI 5: CEK PESANAN -> VOUCHER (UPDATE V2)
+// FUNGSI 5: CEK PESANAN -> VOUCHER
 // ==========================================
 function initCekPesanan() {
     const form = document.getElementById('form-cek-pesanan');
@@ -432,4 +455,94 @@ function initCekPesanan() {
                 btnSubmit.disabled = false; 
             });
     });
+}
+
+// ==========================================
+// FUNGSI 6: FILTER KAMAR (HARGA & FASILITAS)
+// ==========================================
+
+// 1. Membuat teks angka harga bergerak otomatis saat slider digeser
+document.addEventListener('DOMContentLoaded', function() {
+    const sliderHarga = document.getElementById('filter-harga');
+    const labelHarga = document.getElementById('label-harga');
+    if (sliderHarga && labelHarga) {
+        sliderHarga.addEventListener('input', function() {
+            labelHarga.textContent = formatRupiah(this.value);
+        });
+    }
+});
+
+// 2. Menerapkan Filter ke Data Kamar
+async function terapkanFilter() {
+    const checkin = document.getElementById('filter-checkin').value;
+    const checkout = document.getElementById('filter-checkout').value;
+    const kapasitas = document.getElementById('filter-kapasitas').value;
+    const maxHarga = document.getElementById('filter-harga').value;
+    
+    let url = 'http://127.0.0.1:5000/api/tipe-kamar'; // Default: Ambil semua kamar
+    let pakaiTanggal = false;
+
+    // 1. Validasi Tanggal (Jika user mengisi form tanggal)
+    if (checkin || checkout) {
+        if (!checkin || !checkout) return alert('Silakan isi kedua tanggal Check-In dan Check-Out!');
+        if (new Date(checkout) <= new Date(checkin)) return alert('Tanggal Check-Out harus setelah Check-In!');
+        
+        url = `http://127.0.0.1:5000/api/cari-kamar?checkin=${checkin}&checkout=${checkout}&kapasitas=${kapasitas}`;
+        pakaiTanggal = true;
+        
+        // Opsional: Update ringkasan di panel Booking Details (jika ada)
+        const sumIn = document.getElementById('summary-in');
+        const sumOut = document.getElementById('summary-out');
+        if (sumIn) sumIn.textContent = checkin;
+        if (sumOut) sumOut.textContent = checkout;
+    }
+
+    try {
+        const wadah = document.getElementById('kamar-container');
+        wadah.innerHTML = '<p style="text-align: center; padding: 50px;">Menerapkan filter...</p>';
+
+        // 2. Ambil data dari Backend (Sesuai URL: semua atau spesifik tanggal)
+        const response = await fetch(url);
+        const data = await response.json();
+        originalRoomData = data.data || data;
+
+        // 3. Filter Berlapis di Frontend (Harga & Fasilitas)
+        const checkboxes = document.querySelectorAll('.filter-fasilitas:checked');
+        const fasilitasPilihan = Array.from(checkboxes).map(cb => cb.value);
+
+        globalRoomData = originalRoomData.filter(kamar => {
+            const pasHarga = kamar.harga_per_malam <= parseInt(maxHarga);
+            const pasFasilitas = fasilitasPilihan.every(fas => kamar.fasilitas && kamar.fasilitas.includes(fas));
+            // Jika tidak pakai API tanggal, kita pastikan kapasitasnya cocok secara manual
+            const pasKapasitas = pakaiTanggal ? true : (kamar.kapasitas >= parseInt(kapasitas)); 
+
+            return pasHarga && pasFasilitas && pasKapasitas;
+        });
+
+        // 4. Cetak ulang hasilnya
+        currentPage = 1;
+        renderKamarCards();
+
+    } catch (error) {
+        console.error(error);
+        document.getElementById('kamar-container').innerHTML = '<h3 style="color:red; text-align:center;">Gagal menerapkan filter.</h3>';
+    }
+}
+
+function resetFilter() {
+    document.getElementById('filter-checkin').value = '';
+    document.getElementById('filter-checkout').value = '';
+    document.getElementById('filter-kapasitas').value = '2';
+    document.getElementById('filter-harga').value = 10000000;
+    document.getElementById('label-harga').textContent = "Rp 10.000.000";
+    document.querySelectorAll('.filter-fasilitas').forEach(cb => cb.checked = false);
+
+    // Kembalikan teks ringkasan Booking Details ke strip (-)
+    const sumIn = document.getElementById('summary-in');
+    const sumOut = document.getElementById('summary-out');
+    if (sumIn) sumIn.textContent = '-';
+    if (sumOut) sumOut.textContent = '-';
+
+    // Muat ulang data asli dari awal
+    loadDataBeranda();
 }

@@ -123,11 +123,11 @@ body {
 }
 
 /* Tombol Tamu vs Admin */
-.btn-tamu { background-color: #5D1E21; } /* Merah Marun */
+.btn-tamu { background-color: #5D1E21; }
 .btn-tamu:hover { background-color: #3d1315; }
 
-.btn-admin { background-color: #154230; } /* Hijau Gelap */
-.btn-admin:hover { background-color: #0c2b1f; }
+.btn-admin { background-color: #5D1E21; }
+.btn-admin:hover { background-color: #3d1315; }
 
 .error-message {
     color: #d9534f;

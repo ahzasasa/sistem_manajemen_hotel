@@ -24,7 +24,9 @@ CREATE TABLE tipe_kamar (
     kapasitas INT NOT NULL DEFAULT 2,
     lantai_min INT,
     lantai_max INT,
-    harga_per_malam DECIMAL(12, 2) NOT NULL
+    harga_per_malam DECIMAL(12, 2) NOT NULL,
+    fasilitas TEXT,
+    deskripsi TEXT
 ) ENGINE=InnoDB;
 
 -- Data Fasilitas Tambahan
@@ -374,23 +376,21 @@ INSERT INTO staf (nama_staf, id_posisi, nomor_telepon, username, password) VALUE
 -- ==========================================
 -- 6. INPUT DATA AWAL (Tipe Kamar, Fasilitas, Kamar Fisik)
 -- ==========================================
-
-
--- Input Data Tipe Kamar (Dengan Kapasitas yang Benar)
-INSERT INTO tipe_kamar VALUES 
-(1, 'Standard King', 2, 3, 5, 500000),
-(2, 'Standard Twin', 2, 3, 5, 500000),
-(3, 'Superior Room', 2, 6, 8, 700000),
-(4, 'Deluxe King', 2, 9, 14, 1200000),
-(5, 'Deluxe Twin', 2, 9, 14, 1200000),
-(6, 'Deluxe City View', 2, 9, 14, 1400000),
-(7, 'Family King', 4, 15, 16, 1800000),
-(8, 'Family Twin', 4, 15, 16, 1800000),
-(9, 'Family Connecting', 4, 15, 16, 2000000),
-(10, 'Connecting Room', 4, 17, 18, 2000000),
-(11, 'Junior Suite', 2, 19, 21, 2500000),
-(12, 'Suite Room', 2, 22, 24, 4000000),
-(13, 'Presidential Suite', 4, 25, 25, 10000000);
+-- Input Data Tipe Kamar
+INSERT INTO tipe_kamar (id_tipe, nama_tipe, kapasitas, lantai_min, lantai_max, harga_per_malam, fasilitas, deskripsi) VALUES
+(1, 'Standard King', 2, 3, 5, 500000, 'Wi-Fi 50Mbps, Smart TV 40", AC Sentral, Air Panas/Dingin', 'Kamar nyaman seluas 25 meter persegi dengan ranjang King. Pilihan ekonomis terbaik untuk pengalaman menginap yang efisien.'),
+(2, 'Standard Twin', 2, 3, 5, 500000, 'Wi-Fi 50Mbps, Smart TV 40", AC Sentral, Air Panas/Dingin', 'Kamar nyaman 25 meter persegi dengan dua ranjang terpisah. Sangat cocok untuk rekan kerja atau teman perjalanan.'),
+(3, 'Superior Room', 2, 6, 8, 700000, 'Wi-Fi 100Mbps, Smart TV 50", Mini Kulkas, AC Sentral, Bathub', 'Kamar luas dengan pemandangan kota di lantai menengah. Menawarkan kenyamanan ekstra untuk istirahat Anda.'),
+(4, 'Deluxe King', 2, 9, 14, 1200000, 'Wi-Fi 100Mbps, Smart TV 55", Balkon Pribadi, Bathub, Mesin Kopi', 'Kamar mewah dengan desain elegan dan ranjang King premium. Menawarkan balkon pribadi untuk bersantai.'),
+(5, 'Deluxe Twin', 2, 9, 14, 1200000, 'Wi-Fi 100Mbps, Smart TV 55", Balkon Pribadi, Bathub, Mesin Kopi', 'Kamar mewah dengan dua ranjang ukuran Queen. Dilengkapi fasilitas premium untuk kenyamanan maksimal.'),
+(6, 'Deluxe City View', 2, 9, 14, 1400000, 'Wi-Fi 100Mbps, Smart TV 55", Jendela Panorama, Bathub, Akses Lounge', 'Menawarkan pemandangan lampu kota yang memukau dari jendela panorama. Kamar pilihan untuk nuansa romantis.'),
+(7, 'Family King', 4, 15, 16, 1800000, 'Wi-Fi 200Mbps, 2 Smart TV, Ruang Keluarga, Sofa Bed, 2 Kamar Mandi', 'Kamar keluarga yang luas dengan satu ranjang King dan tambahan sofa bed. Sangat cocok untuk liburan keluarga kecil.'),
+(8, 'Family Twin', 4, 15, 16, 1800000, 'Wi-Fi 200Mbps, 2 Smart TV, Ruang Keluarga, Sofa Bed, 2 Kamar Mandi', 'Kamar keluarga dengan dua ranjang Queen dan ruang keluarga terpisah yang menjamin privasi setiap anggota keluarga.'),
+(9, 'Family Connecting', 4, 15, 16, 2000000, 'Wi-Fi 200Mbps, Pintu Penghubung, 2 Smart TV, 2 Kamar Mandi', 'Dua kamar yang terhubung langsung melalui pintu bagian dalam. Memberikan keleluasaan akses namun tetap menjaga privasi.'),
+(10, 'Connecting Room', 4, 17, 18, 2000000, 'Wi-Fi 200Mbps, Pintu Penghubung, Akses Cepat Elevator', 'Solusi cerdas untuk rombongan yang membutuhkan akses mudah antar kamar. Terletak di lantai strategis.'),
+(11, 'Junior Suite', 2, 19, 21, 2500000, 'Wi-Fi 300Mbps, Smart TV 65", Ruang Tamu, Jacuzzi, Akses VIP Lounge', 'Suite mewah dengan area ruang tamu terpisah dari kamar tidur. Dirancang khusus untuk tamu VVIP.'),
+(12, 'Suite Room', 2, 22, 24, 4000000, 'Wi-Fi 500Mbps, Home Theater, Ruang Makan Pribadi, Jacuzzi, Butler 24 Jam', 'Pengalaman menginap tanpa batas dengan fasilitas sekelas bintang lima dan pelayanan butler eksklusif.'),
+(13, 'Presidential Suite', 4, 25, 25, 10000000, 'Kecepatan Internet Khusus, Dapur Pribadi, Ruang Rapat, Kolam Renang Pribadi', 'Kamar termewah dan terbesar di lantai tertinggi. Menawarkan pemandangan 360 derajat dan privasi tingkat tinggi.');
 
 
 

@@ -1478,7 +1478,51 @@ def hapus_staf(kode_staf):
         if cursor: cursor.close()
         if conn: conn.close()
         
-                               
+
+# ==========================================
+# API AMBIL DETAIL KAMAR
+# ==========================================
+@app.route('/api/tipe-kamar/<int:id_tipe>', methods=['GET'])
+def get_detail_kamar(id_tipe):
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM tipe_kamar WHERE id_tipe = %s", (id_tipe,))
+        kamar = cursor.fetchone()
+        
+        if kamar:
+            return jsonify({'status': 'success', 'data': kamar})
+        else:
+            return jsonify({'status': 'error', 'message': 'Kamar tidak ditemukan'}), 404
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+        
+# ==========================================
+# API AMBIL SEMUA DAFTAR TIPE KAMAR (Katalog Halaman Utama)
+# ==========================================
+@app.route('/api/tipe-kamar', methods=['GET'])
+def get_semua_tipe_kamar():  # <--- NAMA FUNGSI SUDAH DIBEDAKAN
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        # Ambil semua data dari tabel tipe_kamar
+        cursor.execute("SELECT * FROM tipe_kamar")
+        kamar_all = cursor.fetchall()
+        
+        return jsonify({'status': 'success', 'data': kamar_all})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+        
+                                               
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================

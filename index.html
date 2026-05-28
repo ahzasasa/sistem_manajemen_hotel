@@ -12,7 +12,7 @@
         <div class="logo">HOTEL APAYA?</div>
         <nav>
             <ul>
-                <li><a href="index.html" style="font-weight: bold; border-bottom: 2px solid #101111;">Beranda</a></li>
+                <li><a href="index.html" class="nav-active">Beranda</a></li>
                 <li><a href="kamar.html">Kamar</a></li>
                 <li><a href="fasilitas.html">Fasilitas</a></li>
                 <li><a href="cek-pesanan.html">Cek Pesanan</a></li>
@@ -22,40 +22,54 @@
 
     <section class="hero-engine"></section>
 
-    <div class="search-engine-bar">
-        <form action="#" method="GET" class="search-engine-container">
-            <div class="form-group-engine">
-                <label>CHECK IN</label>
-                <input type="date" id="checkin" required>
+    <div class="engine-layout" style="display: flex; gap: 25px; align-items: flex-start;">
+        
+        <div class="booking-summary-widget" style="width: 260px; flex-shrink: 0; margin-top: 0;">
+            <h3 class="widget-title filter-title">Cari & Filter</h3>
+            
+            <div class="filter-group">
+                <label class="filter-label">Check-In</label>
+                <input type="date" id="filter-checkin" class="filter-input">
             </div>
-            <div class="form-group-engine">
-                <label>CHECK OUT</label>
-                <input type="date" id="checkout" required>
+            <div class="filter-group">
+                <label class="filter-label">Check-Out</label>
+                <input type="date" id="filter-checkout" class="filter-input">
             </div>
-            <div class="form-group-engine">
-                <label>ROOM & GUEST</label>
-                <select id="kapasitas">
+            <div class="filter-group filter-divider">
+                <label class="filter-label">Tamu & Kamar</label>
+                <select id="filter-kapasitas" class="filter-input">
                     <option value="1">1 Room, 1 Guest</option>
                     <option value="2" selected>1 Room, 2 Guests</option>
                     <option value="3">1 Room, 3 Guests</option>
                     <option value="4">1 Room, 4 Guests</option>
                 </select>
             </div>
-            <div class="form-group-engine">
-                <label>PROMOCODE</label>
-                <input type="text" placeholder="Promo">
+            
+            <div class="filter-group filter-divider">
+                <label class="filter-label">Maksimal Harga / Malam</label>
+                <input type="range" id="filter-harga" class="filter-range" min="500000" max="10000000" step="100000" value="10000000">
+                <span id="label-harga" class="filter-price-label">Rp 10.000.000</span>
             </div>
-            <button type="submit" class="btn-engine-search">Search</button>
-        </form>
-    </div>
 
-    <div class="engine-layout">
-        
-        <div class="engine-main" id="kamar-container">
-            <p style="text-align: center; padding: 50px;">Memuat ketersediaan kamar dari database...</p>
+            <div class="filter-group">
+                <label class="filter-label filter-mb">Fasilitas Populer</label>
+                
+                <label class="checkbox-label"><input type="checkbox" class="filter-fasilitas filter-checkbox" value="Bathub"> Bathub</label>
+                <label class="checkbox-label"><input type="checkbox" class="filter-fasilitas filter-checkbox" value="Balkon"> Balkon Pribadi</label>
+                <label class="checkbox-label"><input type="checkbox" class="filter-fasilitas filter-checkbox" value="Ruang Keluarga"> Ruang Keluarga</label>
+                <label class="checkbox-label"><input type="checkbox" class="filter-fasilitas filter-checkbox" value="Pintu Penghubung"> Pintu Penghubung</label>
+                <label class="checkbox-label"><input type="checkbox" class="filter-fasilitas filter-checkbox" value="Jacuzzi"> Jacuzzi</label>
+            </div>
+
+            <button onclick="terapkanFilter()" class="btn-filter-primary">Terapkan Filter</button>
+            <button onclick="resetFilter()" class="btn-filter-secondary">Reset Semua</button>
         </div>
 
-        <div class="engine-sidebar">
+        <div class="engine-main" id="kamar-container" style="flex: 1; min-width: 0;">
+            <p class="loading-text">Memuat ketersediaan kamar dari database...</p>
+        </div>
+
+        <div class="engine-sidebar" style="width: 280px; flex-shrink: 0;">
             <div class="booking-summary-widget">
                 <h3 class="widget-title">Booking Details</h3>
                 <div class="date-summary">
@@ -63,7 +77,7 @@
                         <span class="label">Check In</span>
                         <strong id="summary-in">-</strong>
                     </div>
-                    <div style="text-align: right;">
+                    <div class="text-right">
                         <span class="label">Check Out</span>
                         <strong id="summary-out">-</strong>
                     </div>
@@ -80,14 +94,12 @@
 
     <footer class="site-footer">
         <div class="footer-container">
-            
             <div class="footer-col">
                 <h4>Hubungi Kami</h4>
                 <p>📍 Jl. Terogong Raya No. 17<br>Jakarta Selatan 12430 - Indonesia</p>
                 <p>📞 (021) 750 7050</p>
                 <p>✉️ info@hotelreservasi.com</p>
             </div>
-
             <div class="footer-col">
                 <h4>Media Sosial</h4>
                 <div class="social-grid">
@@ -99,9 +111,7 @@
                     <a href="#">WhatsApp</a>
                 </div>
             </div>
-
         </div>
-
         <div class="footer-bottom">
             <p>Hak Cipta &copy; 2026 Hotel Reservasi</p>
         </div>
