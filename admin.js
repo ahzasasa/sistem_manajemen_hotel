@@ -539,6 +539,8 @@ async function muatDaftarStaf() {
             }
 
             result.data.forEach(staf => {
+                console.log("Data staf:", staf);        
+
                 // 1. Buat Email buatan dari Username
                 const emailPerusahaan = `${staf.username}@hotelreservasi.com`;
                 
@@ -556,7 +558,7 @@ async function muatDaftarStaf() {
                 // 4. Susun Baris Tabel
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="ps-4 fw-bold text-muted">${staf.id_staf || '-'}</td>
+                    <td class="ps-4 fw-bold text-muted">${staf.kode_staf}</td>
                     <td>
                         <div class="fw-bold text-dark">${staf.nama_staf}</div>
                         <div class="text-muted" style="font-size: 0.75rem;">${emailPerusahaan}</div>
@@ -567,10 +569,10 @@ async function muatDaftarStaf() {
                     <td>${badgeStatus}</td>
                     
                     <td class="pe-4 text-end">
-                        <button class="btn btn-sm btn-light text-primary me-1" title="Edit Data" onclick="editStaf('${staf.id_staf}')">
+                        <button class="btn btn-sm btn-light text-primary me-1" title="Edit Data" onclick="editStaf('${staf.kode_staf}')">
                             <i class="fa-solid fa-pen"></i>
                         </button>
-                        <button class="btn btn-sm btn-light text-danger" title="Hapus" onclick="hapusStaf('${staf.id_staf}')">
+                        <button class="btn btn-sm btn-light text-danger" title="Hapus" onclick="hapusStaf('${staf.kode_staf}')">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </td>
@@ -582,8 +584,6 @@ async function muatDaftarStaf() {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Gagal terhubung ke database.</td></tr>';
     }
 }
-
-
 
 // ==========================================
 // ANALITIK: PIE CHART & HEATMAP (INTERAKTIF & TIME TRAVEL)
@@ -775,7 +775,7 @@ async function hapusStaf(idStaf) {
             if (data.status === 'success') {
                 Swal.fire('Terhapus!', 'Staf berhasil diberhentikan.', 'success');
                 // Refresh tabel otomatis (GANTI dengan nama fungsi pemanggil tabel Anda)
-                tampilkanTabelStaf(); 
+                muatDaftarStaf(); 
             } else {
                 Swal.fire('Gagal!', data.message, 'error');
             }
@@ -788,8 +788,8 @@ async function hapusStaf(idStaf) {
 // ==========================================
 // FUNGSI MENGEDIT STAF (ALIHKAN KE HALAMAN BARU)
 // ==========================================
-function editStaf(idStaf) {
-    window.location.href = `edit-staf.html?id=${idStaf}`;
+function editStaf(kodeStaf) {
+    window.location.href = `edit-staf.html?id=${kodeStaf}`;
 }
 
 

@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function inisialisasiHalamanEdit() {
-    // 1. Ambil ID dari URL (?id=BO-002)
+    // 1. Ambil ID dari URL (Misal: ?id=4)
     const urlParams = new URLSearchParams(window.location.search);
     const idStaf = urlParams.get('id');
 
@@ -20,15 +20,21 @@ async function inisialisasiHalamanEdit() {
         const response = await fetch(`http://127.0.0.1:5000/api/staf/${idStaf}`);
         const result = await response.json();
 
-        if (result.status === 'success') {
-            const staf = result.data;
+        // KOREKSI: Python mengembalikan data langsung (bukan result.data)
+        // Kita cek dari response HTTP-nya (ok = 200) dan memastikan ada nama_staf
+        if (response.ok && result.nama_staf) {
+            const staf = result; // Langsung gunakan result
+            
+            // Isi form
             document.getElementById('edit-id').value = staf.kode_staf || staf.id_staf;
             document.getElementById('edit-nama').value = staf.nama_staf;
             document.getElementById('edit-posisi').value = staf.id_posisi;
-            document.getElementById('edit-telepon').value = staf.nomor_telepon;
-            document.getElementById('edit-username').value = staf.username;
+            
+            // Gunakan || '' agar jika data kosong, form tidak bertuliskan "undefined"
+            document.getElementById('edit-telepon').value = staf.nomor_telepon || '';
+            document.getElementById('edit-username').value = staf.username || '';
         } else {
-            Swal.fire('Error!', 'Data staf tidak ditemukan.', 'error');
+            Swal.fire('Error!', result.message || 'Data staf tidak ditemukan di database.', 'error');
         }
     } catch (err) {
         Swal.fire('Error!', 'Gagal menarik data dari server.', 'error');
@@ -67,12 +73,12 @@ async function inisialisasiHalamanEdit() {
                 } else {
                     Swal.fire('Gagal!', result.message, 'error');
                     btnSimpan.disabled = false;
-                    btnSimpan.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
+                    btnSimpan.innerHTML = 'Simpan Perubahan';
                 }
             } catch (err) {
                 Swal.fire('Error!', 'Gagal menyimpan data.', 'error');
                 btnSimpan.disabled = false;
-                btnSimpan.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
+                btnSimpan.innerHTML = 'Simpan Perubahan';
             }
         });
     }

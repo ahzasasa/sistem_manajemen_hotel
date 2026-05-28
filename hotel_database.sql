@@ -88,7 +88,6 @@ CREATE TABLE slip_gaji (
 -- ==========================================
 -- 3. TRIGGERS UNTUK KODE STAF OTOMATIS
 -- ==========================================
-
 DELIMITER //
 
 -- Trigger 1: Otomatis membuat ID saat mendaftarkan staf baru

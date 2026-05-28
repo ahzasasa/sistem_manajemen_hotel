@@ -361,7 +361,7 @@ def buat_pesanan_fasilitas():
                            (data['nama'], data['email'], data['telepon']))
             id_tamu = cursor.lastrowid
 
-# 2. Ekstraksi Info Fasilitas (Ambil nama dan kategori)
+        # 2. Ekstraksi Info Fasilitas (Ambil nama dan kategori)
         cursor.execute("SELECT nama_fasilitas, kategori FROM fasilitas WHERE id_fasilitas = %s", (data['id_fasilitas'],))
         fasilitas_info = cursor.fetchone()
         
@@ -565,8 +565,7 @@ def admin_dashboard():
 def get_staf_housekeeping():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    # Menjalankan query untuk menarik staf spesifik kebersihan
-    cursor.execute("SELECT id_staf, nama_staf, posisi FROM staf WHERE posisi LIKE '%Attendant%' OR posisi LIKE '%Housekeeping%'")
+    cursor.execute("SELECT id_staf, nama_staf, id_posisi FROM staf WHERE id_posisi = 4")
     staf = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -1420,93 +1419,66 @@ def get_riwayat_presensi_portal(id_staf):
         
         
 # ==========================================
-# 1. API UNTUK MENGHAPUS STAF
+# 1. API AMBIL 1 DATA STAF (Pakai kode_staf)
 # ==========================================
-@app.route('/api/staf/<id_staf>', methods=['DELETE'])
-def hapus_staf(id_staf):
+@app.route('/api/staf/<kode_staf>', methods=['GET'])
+def get_staf_detail(kode_staf):
+    conn = None; cursor = None
     try:
-        cursor = mysql.connection.cursor()
-        # Perintah SQL untuk menghapus data berdasarkan ID
-        cursor.execute("DELETE FROM staf WHERE id_staf = %s", (id_staf,))
-        mysql.connection.commit()
-        cursor.close()
-        
-        return jsonify({'status': 'success', 'message': 'Data staf berhasil dihapus'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        # Cari berdasarkan kode_staf (Misal: HK-004)
+        cursor.execute("SELECT * FROM staf WHERE kode_staf = %s", (kode_staf,))
+        staf = cursor.fetchone()
+        if staf: return jsonify(staf)
+        else: return jsonify({"status": "error", "message": "Data staf tidak ditemukan."}), 404
+    except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
 
 # ==========================================
-# API UNTUK MENGEDIT STAF (Contoh: Ubah Nama & Posisi)
+# 2. API EDIT DATA STAF (Pakai kode_staf)
 # ==========================================
-@app.route('/api/staf/<id_staf>', methods=['PUT'])
-def edit_staf(id_staf):
+@app.route('/api/staf/<kode_staf>', methods=['PUT'])
+def edit_staf(kode_staf):
     data = request.json
-    nama_baru = data.get('nama_staf')
-    id_posisi_baru = data.get('id_posisi')
-    
+    conn = None; cursor = None
     try:
-        cursor = mysql.connection.cursor()
-        # Perintah SQL untuk memperbarui data
-        cursor.execute("""
-            UPDATE staf 
-            SET nama_staf = %s, id_posisi = %s 
-            WHERE id_staf = %s
-        """, (nama_baru, id_posisi_baru, id_staf))
-        mysql.connection.commit()
-        cursor.close()
-        
-        return jsonify({'status': 'success', 'message': 'Data staf berhasil diperbarui'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-    
-    
-@app.route('/api/staf/<id_staf>', methods=['GET'])
-def get_detail_staf(id_staf):
-    try:
-        cursor = mysql.connection.cursor()
-        
-        cursor.execute("SELECT * FROM staf WHERE kode_staf = %s", (id_staf,))
-        
-        row = cursor.fetchone()
-        
-        if row:
-            nama_kolom = [kolom[0] for kolom in cursor.description]
-            staf_dict = dict(zip(nama_kolom, row))
-            cursor.close()
-            return jsonify({'status': 'success', 'data': staf_dict})
-        else:
-            cursor.close()
-            return jsonify({'status': 'error', 'message': 'Data staf tidak ditemukan.'})
-            
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-    
-    
-@app.route('/api/staf/<id_staf>', methods=['PUT'])
-def update_staf(id_staf):
-    data = request.json
-    try:
-        cursor = mysql.connection.cursor()
-        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Update berdasarkan kode_staf
         cursor.execute("""
             UPDATE staf 
             SET nama_staf = %s, id_posisi = %s, nomor_telepon = %s, username = %s 
             WHERE kode_staf = %s
-        """, (
-            data.get('nama_staf'), 
-            data.get('id_posisi'), 
-            data.get('nomor_telepon'), 
-            data.get('username'), 
-            id_staf
-        ))
-        mysql.connection.commit()
-        cursor.close()
-        return jsonify({'status': 'success', 'message': 'Data berhasil diperbarui'})
+        """, (data.get('nama_staf'), data.get('id_posisi'), data.get('nomor_telepon'), data.get('username'), kode_staf))
+        conn.commit()
+        return jsonify({'status': 'success', 'message': 'Data staf berhasil diperbarui!'})
+    except Exception as e: return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+# ==========================================
+# 3. API HAPUS STAF (Pakai kode_staf)
+# ==========================================
+@app.route('/api/staf/<kode_staf>', methods=['DELETE'])
+def hapus_staf(kode_staf):
+    conn = None; cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Hapus berdasarkan kode_staf
+        cursor.execute("DELETE FROM staf WHERE kode_staf = %s", (kode_staf,))
+        conn.commit()
+        return jsonify({'status': 'success', 'message': 'Data staf berhasil dihapus'})
+    except Exception as e: return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
         
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-    
-                            
+                               
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================
