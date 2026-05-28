@@ -24,7 +24,7 @@ function pilihPeran(peran) {
 }
 
 // =================================================================
-// 2. LOGIKA VERIFIKASI & AUTO-ROUTING LOGIN
+// LOGIKA VERIFIKASI & AUTO-ROUTING LOGIN (login.js)
 // =================================================================
 document.addEventListener('DOMContentLoaded', function() {
     const formLoginAdmin = document.getElementById('form-login-admin'); 
@@ -38,6 +38,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const btnSubmit = formLoginAdmin.querySelector('.btn-admin');
             const pesanError = document.getElementById('pesan-error');
 
+            // ========================================================
+            // 1. JALUR KHUSUS: HANYA UNTUK MASTER ADMINISTRATOR
+            // ========================================================
+            if (usernameInput === 'admin' && passwordInput === 'admin123') {
+                // Bersihkan sesi lama terlebih dahulu
+                sessionStorage.clear();
+                
+                // Buat tiket unik khusus Admin Master
+                sessionStorage.setItem('isAdminMaster', 'true');
+                sessionStorage.setItem('staf_username', 'Administrator');
+                
+                // Pindahkan ke halaman admin
+                window.location.href = 'admin.html';
+                return; // Berhenti di sini, jangan lewat ke database
+            }
+
+            // ========================================================
+            // 2. JALUR NORMAL: UNTUK SEMUA STAF DI DATABASE
+            // ========================================================
             const teksAsli = btnSubmit.textContent;
             btnSubmit.textContent = 'MEMVERIFIKASI...';
             btnSubmit.disabled = true;
@@ -53,32 +72,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
 
                 if (data.status === 'success') {
-                    // ==============================================
-                    // LANGSUNG SIMPAN SESI TANPA POP-UP
-                    // ==============================================
+                    // Simpan data sesi staf biasa
                     sessionStorage.setItem('staf_logged_in', 'true');
                     sessionStorage.setItem('staf_username', data.nama); 
                     sessionStorage.setItem('id_staf', data.id_staf); 
                     sessionStorage.setItem('id_posisi', data.id_posisi);
 
-                    // ==============================================
-                    // SISTEM AUTO-ROUTING BERDASARKAN ID_POSISI
-                    // ==============================================
-                    const idPosisi = parseInt(data.id_posisi);
+                    // PENTING: Semua staf dari database TANPA KECUALI langsung dilempar ke portal staf
+                    window.location.href = 'staf.html';
                     
-                    // ID 1 (Manager), 2 (Back Office), 3 (Front Office), 8 (Sales)
-                    const grupDashboardAdmin = [1, 2, 3, 8]; 
-                    
-                    if (grupDashboardAdmin.includes(idPosisi)) {
-                        // Lempar ke Dashboard Utama (Instan)
-                        window.location.href = 'admin.html';
-                    } else {
-                        // Sisa divisi lapangan (Housekeeping, F&B, Wellness, Engineering)
-                        // Lempar ke Portal Staf (Instan)
-                        window.location.href = 'staf.html';
-                    }
                 } else {
-                    // Pop-up error TETAP ADA agar pengguna tahu jika username/password salah
                     Swal.fire('Akses Ditolak!', data.message, 'error');
                     if (pesanError) {
                         pesanError.textContent = data.message;

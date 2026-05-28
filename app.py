@@ -3,7 +3,6 @@ from datetime import datetime
 import mysql.connector
 from flask_cors import CORS
 from datetime import timedelta
-from datetime import datetime
 
 app = Flask(__name__)
 # Mengaktifkan CORS agar frontend (HTML/JS) diizinkan mengambil data dari backend Python
@@ -1420,7 +1419,94 @@ def get_riwayat_presensi_portal(id_staf):
         if conn: conn.close()
         
         
-                
+# ==========================================
+# 1. API UNTUK MENGHAPUS STAF
+# ==========================================
+@app.route('/api/staf/<id_staf>', methods=['DELETE'])
+def hapus_staf(id_staf):
+    try:
+        cursor = mysql.connection.cursor()
+        # Perintah SQL untuk menghapus data berdasarkan ID
+        cursor.execute("DELETE FROM staf WHERE id_staf = %s", (id_staf,))
+        mysql.connection.commit()
+        cursor.close()
+        
+        return jsonify({'status': 'success', 'message': 'Data staf berhasil dihapus'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# ==========================================
+# API UNTUK MENGEDIT STAF (Contoh: Ubah Nama & Posisi)
+# ==========================================
+@app.route('/api/staf/<id_staf>', methods=['PUT'])
+def edit_staf(id_staf):
+    data = request.json
+    nama_baru = data.get('nama_staf')
+    id_posisi_baru = data.get('id_posisi')
+    
+    try:
+        cursor = mysql.connection.cursor()
+        # Perintah SQL untuk memperbarui data
+        cursor.execute("""
+            UPDATE staf 
+            SET nama_staf = %s, id_posisi = %s 
+            WHERE id_staf = %s
+        """, (nama_baru, id_posisi_baru, id_staf))
+        mysql.connection.commit()
+        cursor.close()
+        
+        return jsonify({'status': 'success', 'message': 'Data staf berhasil diperbarui'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+    
+    
+@app.route('/api/staf/<id_staf>', methods=['GET'])
+def get_detail_staf(id_staf):
+    try:
+        cursor = mysql.connection.cursor()
+        
+        cursor.execute("SELECT * FROM staf WHERE kode_staf = %s", (id_staf,))
+        
+        row = cursor.fetchone()
+        
+        if row:
+            nama_kolom = [kolom[0] for kolom in cursor.description]
+            staf_dict = dict(zip(nama_kolom, row))
+            cursor.close()
+            return jsonify({'status': 'success', 'data': staf_dict})
+        else:
+            cursor.close()
+            return jsonify({'status': 'error', 'message': 'Data staf tidak ditemukan.'})
+            
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+    
+    
+@app.route('/api/staf/<id_staf>', methods=['PUT'])
+def update_staf(id_staf):
+    data = request.json
+    try:
+        cursor = mysql.connection.cursor()
+        
+        cursor.execute("""
+            UPDATE staf 
+            SET nama_staf = %s, id_posisi = %s, nomor_telepon = %s, username = %s 
+            WHERE kode_staf = %s
+        """, (
+            data.get('nama_staf'), 
+            data.get('id_posisi'), 
+            data.get('nomor_telepon'), 
+            data.get('username'), 
+            id_staf
+        ))
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({'status': 'success', 'message': 'Data berhasil diperbarui'})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+    
+                            
 # ==========================================
 # MENJALANKAN SERVER
 # ==========================================

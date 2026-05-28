@@ -1,18 +1,12 @@
 // ==========================================
-// 1. SISTEM KEAMANAN & OTORISASI HALAMAN
+// SISTEM KEAMANAN & OTORISASI HALAMAN
 // ==========================================
-if (sessionStorage.getItem('staf_logged_in') !== 'true') {
-    alert('Akses ditolak! Silakan login terlebih dahulu.');
+
+const isAdminMaster = sessionStorage.getItem('isAdminMaster');
+
+if (isAdminMaster !== 'true') {
+    alert("Akses Ditolak! Halaman ini hanya untuk Administrator Utama.");
     window.location.href = 'login.html';
-}
-
-// Keamanan Lapis 2: Pastikan yang masuk benar-benar memiliki Hak Akses Admin
-const idPosisi = parseInt(sessionStorage.getItem('id_posisi'));
-const grupAdmin = [1, 2, 3, 8]; // 1:Manager, 2:BackOffice, 3:FrontOffice, 8:Sales
-
-if (!grupAdmin.includes(idPosisi)) {
-    alert('Akses Ilegal! Anda tidak memiliki izin ke Dashboard Admin.');
-    window.location.href = 'staf.html'; // Lempar kembali ke portal lapangan
 }
 
 // =========================================================================
@@ -34,12 +28,21 @@ function switchSection(sectionId, element) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    const isAdminMaster = sessionStorage.getItem('isAdminMaster');
+
+    if (isAdminMaster !== 'true') {
+        alert("Akses Ditolak! Halaman ini hanya untuk Administrator Utama.");
+        window.location.href = 'login.html';
+        return;
+    }
+
     loadAdminData();
     populateStafDropdown();
     renderPetaKamarAsli();
     muatDaftarStaf();
     muatAnalitik();
 
+    // ... (Sisa baris 43 dan seterusnya biarkan saja persis seperti aslinya)
     const btnTambahHK = document.getElementById('btn-tambah-hk');
     if (btnTambahHK) {
         btnTambahHK.addEventListener('click', simpanTugasHousekeeping);
@@ -553,7 +556,7 @@ async function muatDaftarStaf() {
                 // 4. Susun Baris Tabel
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="ps-4 fw-bold text-muted">${staf.kode_staf || '-'}</td>
+                    <td class="ps-4 fw-bold text-muted">${staf.id_staf || '-'}</td>
                     <td>
                         <div class="fw-bold text-dark">${staf.nama_staf}</div>
                         <div class="text-muted" style="font-size: 0.75rem;">${emailPerusahaan}</div>
@@ -562,9 +565,14 @@ async function muatDaftarStaf() {
                     <td>${jamMasuk}</td>
                     <td>${jamPulang}</td>
                     <td>${badgeStatus}</td>
+                    
                     <td class="pe-4 text-end">
-                        <button class="btn btn-sm btn-light text-primary me-1" title="Edit Data"><i class="fa-solid fa-pen"></i></button>
-                        <button class="btn btn-sm btn-light text-danger" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                        <button class="btn btn-sm btn-light text-primary me-1" title="Edit Data" onclick="editStaf('${staf.id_staf}')">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light text-danger" title="Hapus" onclick="hapusStaf('${staf.id_staf}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -740,6 +748,49 @@ async function muatAnalitik() {
     }
 }
 
+
+// ==========================================
+// FUNGSI MENGHAPUS STAF (TOMBOL SAMPAH)
+// ==========================================
+async function hapusStaf(idStaf) {
+    const konfirmasi = await Swal.fire({
+        title: 'Berhentikan Staf?',
+        text: "Data staf ini akan dihapus permanen dari sistem!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+    });
+
+    if (konfirmasi.isConfirmed) {
+        try {
+            // Mengirim perintah DELETE ke Python
+            const response = await fetch(`http://127.0.0.1:5000/api/staf/${idStaf}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                Swal.fire('Terhapus!', 'Staf berhasil diberhentikan.', 'success');
+                // Refresh tabel otomatis (GANTI dengan nama fungsi pemanggil tabel Anda)
+                tampilkanTabelStaf(); 
+            } else {
+                Swal.fire('Gagal!', data.message, 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error!', 'Gagal terhubung ke server.', 'error');
+        }
+    }
+}
+
+// ==========================================
+// FUNGSI MENGEDIT STAF (ALIHKAN KE HALAMAN BARU)
+// ==========================================
+function editStaf(idStaf) {
+    window.location.href = `edit-staf.html?id=${idStaf}`;
+}
 
 
 // ==========================================

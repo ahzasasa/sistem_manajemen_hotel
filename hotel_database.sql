@@ -284,10 +284,11 @@ INSERT INTO staf (nama_staf, id_posisi, nomor_telepon, username, password) VALUE
 ('Lee Min Seok', 1, '081112223333', 'lee.minseok', 'hotel123'),
 ('Park Seo Jin', 1, '081100000003', 'park.seojin', 'hotel123'),
 
--- 2. Back Office / Admin (id_posisi = 2)
-('Administrator', 2, '080000000000', 'admin', 'admin123'),
+-- 2. Back Office (id_posisi = 2)
 ('Choi Yu Jin', 2, '081100000002', 'choi.yujin', 'hotel123'),
 ('Kang Seul Ha', 2, '081100000004', 'kang.seulha', 'hotel123'),
+('Cha Eun Woo', 2, '081100000005', 'cha.eunwoo', 'hotel123'),
+('Im Ju Kyung', 2, '081100000006', 'im.jukyung', 'hotel123'),
 
 -- 3. Front Office (id_posisi = 3)
 ('Hwang Hyun Woo', 3, '081400003001', 'hwang.hyunwoo', 'hotel123'),
