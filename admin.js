@@ -25,9 +25,12 @@ function switchSection(sectionId, element) {
     document.getElementById(sectionId).classList.add('active');
     element.classList.add('active');
 
-    // Trigger Grafik & Peta 
     if (sectionId === 'sec-staf') muatAnalitik();
     if (sectionId === 'sec-housekeeping') renderPetaKamarAsli();
+    
+    if (sectionId === 'sec-reservasi') {
+        if (typeof loadAdminData === "function") muatHubReservasi();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -41,6 +44,21 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnTambahHK) {
         btnTambahHK.addEventListener('click', simpanTugasHousekeeping);
     }
+    const labelTanggal = document.getElementById('label-tanggal-tugas');
+    if (labelTanggal) {
+        const opsiTanggal = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        labelTanggal.innerText = new Date().toLocaleDateString('id-ID', opsiTanggal);
+    }
+
+    setInterval(() => {
+        const tabReservasi = document.getElementById('sec-reservasi');
+        if (tabReservasi && tabReservasi.classList.contains('active')) {
+            if (typeof loadAdminData === "function") {
+                muatHubReservasi();
+            }
+            
+        }
+    }, 15000); // 15000 milidetik = Refresh otomatis setiap 15 Detik
 });
 
 const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);

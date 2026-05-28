@@ -204,7 +204,7 @@ def buat_pesanan():
             SELECT k.id_kamar, k.nomor_kamar 
             FROM kamar k
             WHERE k.id_tipe = %s 
-            AND k.status_kondisi = 'Baik'  -- <=== INI BARIS PELINDUNG BARUNYA
+            AND k.status != 'Perbaikan' -- PERBAIKAN: Mengubah status_kondisi = 'Baik' menjadi status != 'Perbaikan'
             AND k.id_kamar NOT IN (
                 -- 1. Kamar yang sudah dipesan untuk tanggal yang diminta
                 SELECT dr.id_kamar FROM detail_reservasi dr
