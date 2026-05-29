@@ -5,35 +5,34 @@ from flask_cors import CORS
 from datetime import timedelta
 
 app = Flask(__name__)
-# Mengaktifkan CORS agar frontend (HTML/JS) diizinkan mengambil data dari backend Python
 CORS(app)
 
-# ==========================================
+
 # KONFIGURASI KONEKSI DATABASE
-# ==========================================
+
 def get_db_connection():
     connection = mysql.connector.connect(
         host='localhost',
-        user='root',       # Sesuaikan dengan username MySQL Anda
-        password='',       # Kosongkan jika menggunakan XAMPP bawaan
+        user='root',
+        password='',
         database='hotel_reservasi_db'
     )
     return connection
 
 
-# ==========================================
+
 # FUNGSI BANTUAN (HELPER)
-# ==========================================
+
 def generasi_kode_staf(id_posisi, cursor):
-    # 1. Tarik kode_posisi dari tabel master 'posisi' berdasarkan ID
+    # 1. tarik kode_posisi dari tabel master 'posisi' berdasarkan ID
     cursor.execute("SELECT kode_posisi FROM posisi WHERE id_posisi = %s", (id_posisi,))
     hasil_posisi = cursor.fetchone()
 
-    # Jika ID posisi tidak ditemukan, gunakan 'STF' sebagai cadangan
+    # jika id posisi tidak ditemukan, gunakan 'STF' sebagai cadangan
     prefix_posisi = hasil_posisi['kode_posisi'] if hasil_posisi else 'STF'
     prefix = f"{prefix_posisi}-"
 
-    # 2. Cari kode_staf terakhir dengan prefix yang sama di tabel staf
+    # 2. cari kode_staf terakhir dengan prefix yang sama di tabel staf
     cursor.execute("""
         SELECT kode_staf FROM staf 
         WHERE kode_staf LIKE %s 
@@ -42,7 +41,7 @@ def generasi_kode_staf(id_posisi, cursor):
     
     last_staf = cursor.fetchone()
 
-    # 3. Potong teks urutan belakang, lalu naikkan 1 angka dengan zero-padding
+    # 3. potong teks urutan belakang, lalu naikkan 1 angka dengan zero-padding
     if last_staf and last_staf['kode_staf']:
         last_num = int(last_staf['kode_staf'].split('-')[-1])
         next_kode = f"{prefix}{str(last_num + 1).zfill(3)}"
@@ -52,9 +51,9 @@ def generasi_kode_staf(id_posisi, cursor):
     return next_kode
 
 
-# ==========================================
+
 # ENDPOINT API
-# ==========================================
+
 
 # 1. Endpoint Uji Coba Server
 @app.route('/', methods=['GET'])
@@ -71,22 +70,20 @@ def get_tipe_kamar():
     conn = None
     cursor = None
     try:
-        # Membuka koneksi
+        # membuka koneksi
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) 
         
-        # Menarik data tipe kamar
+        # menarik data tipe kamar
         cursor.execute("SELECT * FROM tipe_kamar")
         data_kamar = cursor.fetchall()
         
         return jsonify(data_kamar)
         
     except Exception as e:
-        # Menangkap dan menampilkan pesan jika terjadi kegagalan (misal: XAMPP mati)
         return jsonify({"status": "error", "message": str(e)}), 500
         
     finally:
-        # Blok ini dipastikan akan berjalan untuk menutup jalan koneksi database
         if cursor:
             cursor.close()
         if conn:
@@ -96,7 +93,7 @@ def get_tipe_kamar():
 # 3. Endpoint Pencarian Kamar Tersedia (Persiapan Fitur Booking Engine)
 @app.route('/api/cari-kamar', methods=['GET'])
 def cari_kamar():
-    # 1. Ambil parameter dari URL
+    # 1. ambil parameter dari URL
     checkin = request.args.get('checkin')
     checkout = request.args.get('checkout')
     kapasitas = request.args.get('kapasitas', 1)
@@ -108,7 +105,7 @@ def cari_kamar():
     cursor = conn.cursor(dictionary=True)
     
     try:
-        # 2. Query mencari tipe kamar yang tersedia di rentang tanggal tersebut
+        # 2. query mencari tipe kamar yang tersedia di rentang tanggal tersebut
         query = """
             SELECT DISTINCT tk.* FROM tipe_kamar tk
             JOIN kamar k ON tk.id_tipe = k.id_tipe
@@ -169,9 +166,7 @@ def cek_pesanan():
             if isinstance(pesanan['tanggal_keluar'], datetime):
                 pesanan['tanggal_keluar'] = pesanan['tanggal_keluar'].strftime('%Y-%m-%dT%H:%M:%S')
             
-            # =======================================================
-            # KODE PENGAMAN: Mencegah ID Transaksi Kosong (Null)
-            # =======================================================
+            # cegah id transaksi kosong (null)
             if pesanan.get('status_pembayaran') == 'Lunas' and not pesanan.get('referensi_transaksi'):
                 pesanan['referensi_transaksi'] = f"PAY-{pesanan['id_reservasi']}"
 
@@ -198,7 +193,7 @@ def buat_pesanan():
         checkin_dt = datetime.strptime(data['checkin'], '%Y-%m-%dT%H:%M')
         checkout_dt = datetime.strptime(data['checkout'], '%Y-%m-%dT%H:%M')
         
-        # 1. Cek Ketersediaan Kamar (Cari 1 kamar kosong dan tidak diperbaiki untuk tipe yang dipilih)
+        # 1. cek ketersediaan kamar
         query_kamar = """
             SELECT k.id_kamar, k.nomor_kamar 
             FROM kamar k
@@ -231,7 +226,7 @@ def buat_pesanan():
         id_kamar_terpilih = kamar_tersedia['id_kamar']
         nomor_kamar_terpilih = kamar_tersedia['nomor_kamar']
 
-        # 2. Cek atau Buat Tamu Baru
+        # 2. cek atau buat tamu baru
         cursor.execute("SELECT id_tamu FROM tamu WHERE email = %s", (data['email'],))
         tamu = cursor.fetchone()
         if tamu:
@@ -243,14 +238,13 @@ def buat_pesanan():
                            (data['nama'], data['email'], data['telepon']))
             id_tamu = cursor.lastrowid
 
-        # 3. Buat ID Reservasi Cerdas (Format: NOMORKAMAR-DDMMYY-INCREMENT)
+        # 3. buat id reservasi (format: NOMORKAMAR-DDMMYY-INCREMENT)
         now = datetime.now()
         ddmmyy = now.strftime('%d%m%y')
         
-        # Gabungkan nomor kamar yang ditarik dari database ke dalam prefix
         prefix = f"{nomor_kamar_terpilih}-{ddmmyy}-" 
         
-        # Cari pesanan terakhir dengan prefix kamar dan tanggal yang sama
+        # cari pesanan terakhir dengan prefix kamar dan tanggal yang sama
         cursor.execute(
             "SELECT id_reservasi FROM reservasi WHERE id_reservasi LIKE %s ORDER BY LENGTH(id_reservasi) DESC, id_reservasi DESC LIMIT 1", 
             (prefix + '%',)
@@ -258,16 +252,15 @@ def buat_pesanan():
         last_res = cursor.fetchone()
         
         if last_res:
-            # Memotong teks berdasarkan tanda strip (-) dan mengambil angka urutan paling belakang
             last_id_num = int(last_res['id_reservasi'].split('-')[-1])
             id_reservasi = f"{prefix}{last_id_num + 1}"
         else:
             id_reservasi = f"{prefix}1"
 
-        # Ambil data metode pembayaran dari frontend, jika kosong jadikan Pay at Hotel
+        # ambil data metode pembayaran dari frontend, jika kosong jadikan Pay at Hotel
         metode_bayar = data.get('metode_pembayaran', 'Pay at Hotel')
 
-        # 4. Simpan ke Tabel reservasi (Data Utama)
+        # 4. simpan ke tabel reservasi
         cursor.execute("""
             INSERT INTO reservasi (id_reservasi, id_tamu, tanggal_masuk, tanggal_keluar, status_pesanan, metode_pembayaran) 
             VALUES (%s, %s, %s, %s, %s, %s) 
@@ -278,7 +271,7 @@ def buat_pesanan():
             VALUES (%s, %s, %s)
         """, (id_reservasi, id_kamar_terpilih, data['total_harga']))
 
-        # 6. Buat Tagihan di Tabel invoice
+        # 6. buat tagihan di tabel invoice
         cursor.execute("""
             INSERT INTO invoice (id_reservasi, total_kamar, total_bersih, status_pembayaran) 
             VALUES (%s, %s, %s, 'Belum Dibayar')
@@ -324,11 +317,10 @@ def selesai_reservasi():
         if conn: conn.close()
         
 
-# ==========================================
-# ENDPOINT KHUSUS FASILITAS
-# ==========================================
 
-# Endpoint untuk mengambil data fasilitas
+# ENDPOINT KHUSUS FASILITAS
+
+# endpoint untuk mengambil data fasilitas
 @app.route('/api/fasilitas', methods=['GET'])
 def get_fasilitas():
     conn = get_db_connection()
@@ -339,7 +331,7 @@ def get_fasilitas():
     conn.close()
     return jsonify(fasilitas)
 
-# Endpoint untuk memproses pemesanan fasilitas
+# endpoint untuk memproses pemesanan fasilitas
 @app.route('/api/buat-pesanan-fasilitas', methods=['POST'])
 def buat_pesanan_fasilitas():
     data = request.json
@@ -349,7 +341,7 @@ def buat_pesanan_fasilitas():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Identifikasi Tamu
+        # 1. identifikasi tamu
         cursor.execute("SELECT id_tamu FROM tamu WHERE email = %s", (data['email'],))
         tamu = cursor.fetchone()
         if tamu:
@@ -361,18 +353,17 @@ def buat_pesanan_fasilitas():
                            (data['nama'], data['email'], data['telepon']))
             id_tamu = cursor.lastrowid
 
-        # 2. Ekstraksi Info Fasilitas (Ambil nama dan kategori)
+        # 2. ekstraksi info fasilitas
         cursor.execute("SELECT nama_fasilitas, kategori FROM fasilitas WHERE id_fasilitas = %s", (data['id_fasilitas'],))
         fasilitas_info = cursor.fetchone()
         
-        # Ubah nama jadi huruf kecil semua agar mudah dideteksi
         nama_fas = fasilitas_info['nama_fasilitas'].lower() if fasilitas_info else ''
         kategori_terpilih = fasilitas_info['kategori'] if fasilitas_info else 'Event'
 
-        # 3. Pembentukan ID Modular (Berdasarkan Kata Kunci Nama)
+        # 3. pembentukan id (berdasarkan kata kunci nama)
         if 'ballroom' in nama_fas:
             prefiks = 'BL'
-        elif 'wedding' in nama_fas or 'pernikahan' in nama_fas:  # <-- Ini dia jalur khusus Wedding
+        elif 'wedding' in nama_fas or 'pernikahan' in nama_fas:
             prefiks = 'WD'
         elif 'meeting' in nama_fas or 'rapat' in nama_fas:
             prefiks = 'MR'
@@ -381,16 +372,15 @@ def buat_pesanan_fasilitas():
         elif 'kebugaran' in nama_fas or 'fitness' in nama_fas or 'gym' in nama_fas:
             prefiks = 'FT'
         else:
-            # Jika tidak ada yang cocok, gunakan default bawaan kategori
             prefiks_map = {'Event': 'EV', 'Wellness': 'SP', 'F&B': 'FB'}
             prefiks = prefiks_map.get(kategori_terpilih, 'FS')
         
-        # Konversi format penanggalan
+        # konversi format penanggalan
         tgl_obj = datetime.strptime(data['tanggal'], '%Y-%m-%d')
         tgl_dmy = tgl_obj.strftime("%d%m%y")
         pola_cari = f"{prefiks}-{tgl_dmy}%"
 
-        # Pencarian urutan data terakhir
+        # pencarian urutan data terakhir
         kueri_urut = """
             SELECT IFNULL(MAX(CAST(RIGHT(id_res_fasilitas, 2) AS UNSIGNED)), 0) + 1 AS urut_baru 
             FROM reservasi_fasilitas 
@@ -400,10 +390,10 @@ def buat_pesanan_fasilitas():
         hasil_urut = cursor.fetchone()
         urutan_baru = int(hasil_urut['urut_baru']) if hasil_urut and hasil_urut['urut_baru'] is not None else 1
 
-        # Penggabungan string ID final
+        # penggabungan string id final
         new_id = f"{prefiks}-{tgl_dmy}{urutan_baru:02d}"
 
-        # 4. Penyimpanan Data Reservasi
+        # 4. penyimpanan data reservasi
         query = """
             INSERT INTO reservasi_fasilitas 
             (id_res_fasilitas, id_tamu, id_fasilitas, tanggal_acara, waktu_mulai, jumlah_tamu, total_harga, status_pesanan, metode_pembayaran, catatan_khusus) 
@@ -425,9 +415,9 @@ def buat_pesanan_fasilitas():
         if conn: conn.close()
         
 
-# ==========================================
+
 # ENDPOINT SIMULASI PEMBAYARAN
-# ==========================================
+
 @app.route('/api/bayar-pesanan', methods=['POST'])
 def bayar_pesanan():
     data = request.json
@@ -441,7 +431,7 @@ def bayar_pesanan():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Cari ID Invoice dari Nomor Reservasi ini
+        # 1. cari id invoice dari nomor reservasi
         cursor.execute("SELECT id_invoice FROM invoice WHERE id_reservasi = %s", (id_res,))
         inv = cursor.fetchone()
         
@@ -450,14 +440,14 @@ def bayar_pesanan():
 
         id_invoice = inv['id_invoice']
 
-        # 2. Catat Uang Masuk ke Tabel 'pembayaran'
+        # 2. catat uang masuk ke tabel 'pembayaran'
         referensi = f"PAY-{id_res}-{datetime.now().strftime('%H%M%S')}"
         cursor.execute("""
             INSERT INTO pembayaran (id_invoice, nominal, metode_pembayaran, referensi_transaksi)
             VALUES (%s, %s, %s, %s)
         """, (id_invoice, nominal, metode, referensi))
 
-        # 3. Ubah Status di Tabel 'invoice' menjadi Lunas!
+        # 3. ubah ttatus di tabel 'invoice' menjadi Lunas
         cursor.execute("UPDATE invoice SET status_pembayaran = 'Lunas' WHERE id_reservasi = %s", (id_res,))
 
         conn.commit()
@@ -471,9 +461,9 @@ def bayar_pesanan():
         if conn: conn.close()
         
 
-# ==========================================
+
 # ENDPOINT DASHBOARD ADMIN
-# ==========================================
+
 @app.route('/api/admin-dashboard', methods=['GET'])
 def admin_dashboard():
     conn = None
@@ -482,7 +472,7 @@ def admin_dashboard():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Hitung Okupansi & Kamar Terisi (Tamu In-House)
+        # 1. hitung okupansi & kamar terisi
         cursor.execute("SELECT COUNT(*) as total_kamar FROM kamar")
         total_kamar = cursor.fetchone()['total_kamar']
 
@@ -497,14 +487,14 @@ def admin_dashboard():
         kamar_terisi = cursor.fetchone()['kamar_terisi']
         okupansi = int((kamar_terisi / total_kamar) * 100) if total_kamar > 0 else 0
 
-        # 2. Arus Kedatangan & Keberangkatan Hari Ini
+        # 2. arus kedatangan dan keberangkatan
         cursor.execute("SELECT COUNT(*) as checkin FROM reservasi WHERE DATE(tanggal_masuk) = DATE(NOW()) AND status_pesanan != 'Batal'")
         checkin_hari_ini = cursor.fetchone()['checkin']
 
         cursor.execute("SELECT COUNT(*) as checkout FROM reservasi WHERE DATE(tanggal_keluar) = DATE(NOW()) AND status_pesanan != 'Batal'")
         checkout_hari_ini = cursor.fetchone()['checkout']
 
-        # 3. Pendapatan Hari Ini
+        # 3. pendapatan hari ini
         cursor.execute("""
             SELECT SUM(total_bersih) as total_pendapatan 
             FROM invoice 
@@ -513,14 +503,14 @@ def admin_dashboard():
         pend_hari_ini = cursor.fetchone()['total_pendapatan']
         pendapatan_hari_ini = pend_hari_ini if pend_hari_ini else 0
 
-        # 4. Rasio Status Invoice
+        # 4. rasio status invoice
         cursor.execute("SELECT status_pembayaran, COUNT(*) as jumlah FROM invoice GROUP BY status_pembayaran")
         status_invoice = cursor.fetchall()
         inv_stats = {'Lunas': 0, 'DP Dibayar': 0, 'Belum Dibayar': 0}
         for stat in status_invoice:
             inv_stats[stat['status_pembayaran']] = stat['jumlah']
 
-        # 5. Daftar Reservasi (Untuk Tabel Meja Kerja)
+        # 5. daftar reservasi
         cursor.execute("""
             SELECT r.id_reservasi, 
                    t.nama_lengkap,    # <--- HAPUS tulisan 'as nama_tamu' di sini
@@ -558,9 +548,9 @@ def admin_dashboard():
         if cursor: cursor.close()
         if conn: conn.close()
 
-# ==========================================
+
 # ENDPOINT HOUSEKEEPING & PENUGASAN STAF
-# ==========================================
+
 @app.route('/api/staf-housekeeping', methods=['GET'])
 def get_staf_housekeeping():
     conn = get_db_connection()
@@ -581,7 +571,7 @@ def tugaskan_staf():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        # Cari id_kamar fisik dari nomor kamar visual
+
         cursor.execute("SELECT id_kamar FROM kamar WHERE nomor_kamar = %s", (no_kamar,))
         kamar = cursor.fetchone()
         
@@ -603,9 +593,9 @@ def tugaskan_staf():
         if conn: conn.close()
         
         
-# ==========================================
+
 # ENDPOINT LOGIN ADMIN
-# ==========================================
+
 @app.route('/api/login-admin', methods=['POST'])
 def login_admin():
     data = request.json
@@ -618,12 +608,12 @@ def login_admin():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Cari data admin berdasarkan username dan password
+        # ari data admin berdasarkan username dan password
         cursor.execute("SELECT nama_lengkap, role FROM akun_admin WHERE username = %s AND password = %s", (username_input, password_input))
         admin = cursor.fetchone()
         
         if admin:
-            # Jika cocok, izinkan masuk
+            # jika cocok, izinkan masuk
             return jsonify({
                 "status": "success", 
                 "message": "Akses Diberikan",
@@ -631,7 +621,7 @@ def login_admin():
                 "role": admin['role']
             })
         else:
-            # Jika tidak ada yang cocok, tolak
+            # jika tidak ada yang cocok, tolak
             return jsonify({"status": "error", "message": "Username atau Password salah!"}), 401
             
     except Exception as e:
@@ -639,8 +629,7 @@ def login_admin():
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
-        
-        
+              
 
 @app.route('/api/status-kamar', methods=['GET'])
 def get_status_kamar():
@@ -650,7 +639,6 @@ def get_status_kamar():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Query cerdas untuk mengklasifikasikan status visual kamar secara real-time
         query = """
             SELECT 
                 k.id_kamar, 
@@ -696,9 +684,9 @@ def get_status_kamar():
         if conn: conn.close()
         
         
-# ==========================================
+
 # ENDPOINT UPDATE STATUS RESERVASI
-# ==========================================
+
 @app.route('/api/update-reservasi', methods=['POST'])
 def update_reservasi():
     data = request.json
@@ -711,7 +699,6 @@ def update_reservasi():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Perbarui status di tabel reservasi
         cursor.execute("UPDATE reservasi SET status_pesanan = %s WHERE id_reservasi = %s", (status_baru, id_res))
         conn.commit()
         
@@ -724,9 +711,9 @@ def update_reservasi():
         if conn: conn.close()
         
 
-# ==========================================
+
 # ENDPOINT PEMBATALAN OLEH TAMU
-# ==========================================
+
 @app.route('/api/user-batal', methods=['POST'])
 def user_batal():
     data = request.json
@@ -738,8 +725,7 @@ def user_batal():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
-        # Cari reservasi berdasarkan ID dan Email untuk keamanan
+   
         cursor.execute("""
             SELECT r.status_pesanan, r.tanggal_masuk 
             FROM reservasi r
@@ -755,17 +741,15 @@ def user_batal():
         if pesanan['status_pesanan'] == 'Batal':
             return jsonify({"status": "error", "message": "Pesanan ini sudah dibatalkan sebelumnya."}), 400
             
-        # Cek Aturan 24 Jam sebelum waktu Check-in (asumsi jam 14:00)
         waktu_sekarang = datetime.now()
-        waktu_checkin = pesanan['tanggal_masuk'] # ini format datetime dari MySQL
+        waktu_checkin = pesanan['tanggal_masuk']
         
-        # Hitung batas maksimal batal (H-1 jam 14:00)
+        # batas batal h-6 jam
         batas_batal = waktu_checkin - timedelta(hours=6)
         
         if waktu_sekarang > batas_batal:
             return jsonify({"status": "error", "message": "Batas waktu pembatalan gratis telah lewat (maksimal 6 jam sebelum check-in)."}), 400
             
-        # Jika lolos syarat, batalkan pesanan
         cursor.execute("UPDATE reservasi SET status_pesanan = 'Batal' WHERE id_reservasi = %s", (id_res,))
         conn.commit()
         
@@ -779,9 +763,9 @@ def user_batal():
         if conn: conn.close()
         
 
-# ==========================================
+
 # ENDPOINT PROSES PEMBAYARAN TAMU
-# ==========================================
+
 @app.route('/api/proses-bayar', methods=['POST'])
 def proses_bayar():
     data = request.json
@@ -794,12 +778,11 @@ def proses_bayar():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) 
         
-        # 1. Update status di tabel invoice
+        # 1. ppdate status di tabel invoice
         cursor.execute("UPDATE invoice SET status_pembayaran = %s WHERE id_reservasi = %s", (status_bayar, id_res))
         
-        # 2. JIKA LUNAS: Otomatis cetak resi ke tabel pembayaran
+        # 2. otomatis cetak resi ke tabel pembayaran jika lunas
         if status_bayar == 'Lunas':
-            # Tarik data tagihan
             cursor.execute("SELECT id_invoice, total_bersih FROM invoice WHERE id_reservasi = %s", (id_res,))
             inv = cursor.fetchone()
             
@@ -809,7 +792,6 @@ def proses_bayar():
                 
                 referensi = f"PAY-{id_res}"
                 
-                # Cek dulu agar tidak dobel jika sudah pernah dibayar
                 cursor.execute("SELECT id_pembayaran FROM pembayaran WHERE id_invoice = %s", (id_invoice,))
                 cek_bayar = cursor.fetchone()
                 
@@ -831,19 +813,16 @@ def proses_bayar():
         
     
     
-# ==========================================
 # ENDPOINT: TAMBAH TUGAS HOUSEKEEPING (HK)
-# ==========================================
+
 @app.route('/api/tambah-housekeeping', methods=['POST'])
 def tambah_housekeeping():
     data = request.json
     id_kamar = data.get('id_kamar')
     id_staf = data.get('id_staf')
     tanggal_tugas = data.get('tanggal_tugas')
-    # id_reservasi bisa NULL jika pembersihan rutin, jadi kita amankan
     id_reservasi = data.get('id_reservasi') 
 
-    # Validasi dasar: pastikan data penting tidak kosong
     if not id_kamar or not id_staf or not tanggal_tugas:
         return jsonify({"status": "error", "message": "Data Kamar, Staf, atau Tanggal tidak boleh kosong."}), 400
 
@@ -853,16 +832,13 @@ def tambah_housekeeping():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Perhatikan Gambar 2: Struktur tabel memiliki id_reservasi yang bisa kosong.
-        # Kita gunakan query INSERT: status_kerja otomatis di-set default 'Menunggu'
         query = """
             INSERT INTO housekeeping (id_kamar, id_staf, id_reservasi, tanggal_tugas, status_kerja)
             VALUES (%s, %s, %s, %s, 'Menunggu')
         """
-        # Execute query dengan parameter yang aman
+        
         cursor.execute(query, (id_kamar, id_staf, id_reservasi, tanggal_tugas))
         
-        # Simpan perubahan permanen ke database
         conn.commit()
         
         return jsonify({"status": "success", "message": "Tugas Housekeeping berhasil ditambahkan!"})
@@ -874,9 +850,9 @@ def tambah_housekeeping():
         if conn: conn.close()
         
 
-# ==========================================
+
 # ENDPOINT DETAIL KAMAR AKTIF (POP-UP HOUSEKEEPING)
-# ==========================================
+
 @app.route('/api/detail-kamar-aktif', methods=['GET'])
 def detail_kamar_aktif():
     no_kamar = request.args.get('nomor_kamar')
@@ -887,7 +863,7 @@ def detail_kamar_aktif():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Mengambil data lengkap tamu yang statusnya 'Aktif' di kamar tersebut
+        # mengambil data lengkap tamu yang statusnya 'Aktif' di kamar tersebut
         query = """
             SELECT r.id_reservasi, t.nama_lengkap, t.email, t.nomor_telepon, 
                    k.nomor_kamar, r.tanggal_masuk, r.tanggal_keluar, 
@@ -906,7 +882,7 @@ def detail_kamar_aktif():
         detail = cursor.fetchone()
 
         if detail:
-            # Rapihkan format tanggal agar mudah dibaca
+            # rapikan format tanggal
             detail['tanggal_masuk'] = detail['tanggal_masuk'].strftime('%d %b %Y, %H:%M')
             detail['tanggal_keluar'] = detail['tanggal_keluar'].strftime('%d %b %Y, %H:%M')
             
@@ -925,9 +901,8 @@ def detail_kamar_aktif():
         
         
 
-# ==========================================
 # ENDPOINT LOGIN TERPUSAT (AUTO-ROUTING)
-# ==========================================
+
 @app.route('/api/login', methods=['POST'])
 def proses_login():
     data = request.json
@@ -940,7 +915,6 @@ def proses_login():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Tarik semua data termasuk id_posisi untuk menentukan arah lemparan halaman
         cursor.execute("""
             SELECT s.id_staf, s.nama_staf, p.nama_posisi AS posisi, s.id_posisi 
             FROM staf s
@@ -956,7 +930,7 @@ def proses_login():
                 "id_staf": staf['id_staf'],
                 "nama": staf['nama_staf'],
                 "posisi": staf['posisi'],
-                "id_posisi": staf['id_posisi'] # Kirim ID Posisi ke JavaScript
+                "id_posisi": staf['id_posisi']
             })
         else:
             return jsonify({"status": "error", "message": "Username atau password tidak ditemukan."})
@@ -968,11 +942,10 @@ def proses_login():
         if conn: conn.close()
         
         
-# ==========================================
-# ENDPOINT PORTAL STAF (HOUSEKEEPING)
-# ==========================================
 
-# 1. Mengambil daftar tugas berdasarkan ID Staf yang sedang login
+# ENDPOINT PORTAL STAF (HOUSEKEEPING)
+
+# 1. mengambil daftar tugas berdasarkan id staf yang sedang login
 @app.route('/api/tugas-staf/<int:id_staf>', methods=['GET'])
 def get_tugas_staf(id_staf):
     conn = None
@@ -981,7 +954,7 @@ def get_tugas_staf(id_staf):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Ambil tugas yang statusnya belum selesai
+        # ambil tugas yang statusnya belum selesai
         cursor.execute("""
             SELECT j.id_jadwal, j.id_kamar, k.nomor_kamar, j.jenis_tugas, j.status_tugas 
             FROM jadwal_kebersihan j
@@ -998,7 +971,7 @@ def get_tugas_staf(id_staf):
         if cursor: cursor.close()
         if conn: conn.close()
 
-# 2. Menyelesaikan tugas dan mengubah warna kamar jadi Hijau
+# 2. menyelesaikan tugas dan mengubah warna kamar jadi hijau
 @app.route('/api/selesai-tugas', methods=['POST'])
 def selesai_tugas():
     data = request.json
@@ -1011,10 +984,10 @@ def selesai_tugas():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Update status jadwal menjadi Selesai
+        # update status jadwal menjadi Selesai
         cursor.execute("UPDATE jadwal_kebersihan SET status_tugas = 'Selesai' WHERE id_jadwal = %s", (id_jadwal,))
         
-        # Update status kamar kembali menjadi Tersedia (Hijau di layar Admin)
+        # update status kamar kembali menjadi Tersedia (hijau di layar admin)
         cursor.execute("UPDATE kamar SET status = 'Tersedia' WHERE id_kamar = %s", (id_kamar,))
         
         conn.commit()
@@ -1028,17 +1001,15 @@ def selesai_tugas():
         
        
 
-# ==========================================
 # ENDPOINT PRESENSI STAF
-# ==========================================
 
-# 1. Mencatat Clock-In dan Clock-Out
+# 1. mencatat Clock-In dan Clock-Out
 @app.route('/api/presensi', methods=['POST'])
 def catat_presensi():
     data = request.json
     id_staf = data.get('id_staf')
     
-    # PERBAIKAN 1: Tangkap 'jenis' ATAU 'tipe_absen' agar cocok dengan versi JS manapun
+    # tangkap 'jenis' atau 'tipe_absen'
     jenis = data.get('jenis') or data.get('tipe_absen') 
     
     conn = None; cursor = None
@@ -1046,7 +1017,7 @@ def catat_presensi():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Cek apakah hari ini staf sudah absen
+        # cek apakah hari ini staf sudah absen
         cursor.execute("SELECT * FROM presensi WHERE id_staf = %s AND tanggal = CURDATE()", (id_staf,))
         absen_hari_ini = cursor.fetchone()
         
@@ -1054,7 +1025,7 @@ def catat_presensi():
             if absen_hari_ini:
                 return jsonify({"status": "error", "message": "Anda sudah Clock-In hari ini!"})
             
-            # PERBAIKAN 2: Tambahkan kolom status = 'Hadir' agar Heatmap Admin berfungsi
+            # tambahkan kolom status = 'Hadir'
             cursor.execute("""
                 INSERT INTO presensi (id_staf, tanggal, waktu_masuk, status) 
                 VALUES (%s, CURDATE(), CURTIME(), 'Hadir')
@@ -1066,7 +1037,7 @@ def catat_presensi():
             if absen_hari_ini.get('waktu_pulang'):
                 return jsonify({"status": "error", "message": "Anda sudah Clock-Out hari ini!"})
             
-            # Update jam pulang untuk hari ini
+            # update jam pulang untuk hari ini
             cursor.execute("""
                 UPDATE presensi 
                 SET waktu_pulang = CURTIME() 
@@ -1082,7 +1053,7 @@ def catat_presensi():
         if cursor: cursor.close()
         if conn: conn.close()
 
-# 2. Mengambil Riwayat Presensi (Bulan Ini / 30 Hari Terakhir)
+# 2. mengambil riwayat presensi (bulan ini / 30 hari terakhir)
 @app.route('/api/presensi/<int:id_staf>', methods=['GET'])
 def get_riwayat_presensi(id_staf):
     conn = None; cursor = None
@@ -1090,7 +1061,7 @@ def get_riwayat_presensi(id_staf):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Mengambil data dan menghitung durasi kerja langsung dari MySQL
+        # mengambil data dan menghitung durasi kerja langsung dari MySQL
         cursor.execute("""
             SELECT 
                 DATE_FORMAT(tanggal, '%d %b %Y') as tanggal_format,
@@ -1115,11 +1086,10 @@ def get_riwayat_presensi(id_staf):
         if conn: conn.close()
         
  
-# ==========================================
-# ENDPOINT PROFIL KARYAWAN
-# ==========================================
 
-# 1. Mengambil detail biodata karyawan
+# ENDPOINT PROFIL KARYAWAN
+
+# 1. mengambil detail biodata karyawan
 @app.route('/api/profil/<int:id_staf>', methods=['GET'])
 def get_profil_staf(id_staf):
     conn = None; cursor = None
@@ -1144,7 +1114,7 @@ def get_profil_staf(id_staf):
         if cursor: cursor.close()
         if conn: conn.close()
 
-# 2. Mengubah Password Akun
+# 2. mengubah Password Akun
 @app.route('/api/ubah-password', methods=['POST'])
 def ubah_password():
     data = request.json
@@ -1157,14 +1127,14 @@ def ubah_password():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Cek apakah password lama benar
+        # cek apakah password lama benar
         cursor.execute("SELECT password FROM staf WHERE id_staf = %s", (id_staf,))
         staf = cursor.fetchone()
         
         if staf['password'] != pass_lama:
             return jsonify({"status": "error", "message": "Kata sandi lama yang Anda masukkan SALAH."})
             
-        # Jika benar, update ke password baru
+        # jika benar, update ke password baru
         cursor.execute("UPDATE staf SET password = %s WHERE id_staf = %s", (pass_baru, id_staf))
         conn.commit()
         
@@ -1178,9 +1148,8 @@ def ubah_password():
         
         
         
-# ==========================================
+
 # ENDPOINT SLIP GAJI
-# ==========================================
 
 @app.route('/api/gaji/<int:id_staf>', methods=['GET'])
 def get_slip_gaji(id_staf):
@@ -1206,9 +1175,9 @@ def get_slip_gaji(id_staf):
         if conn: conn.close() 
         
 
-# ==========================================
+
 # ENDPOINT MANAJEMEN STAF (ADMIN PORTAL)
-# ==========================================
+
 @app.route('/api/staf', methods=['GET'])
 def get_semua_staf():
     conn = None; cursor = None
@@ -1216,7 +1185,6 @@ def get_semua_staf():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Tarik data staf sekaligus data kehadiran mereka HARI INI
         cursor.execute("""
             SELECT 
                 s.kode_staf, 
@@ -1242,28 +1210,28 @@ def get_semua_staf():
 
 
 
-# ==========================================
+
 # ENDPOINT PENGAJUAN IZIN / SAKIT
-# ==========================================
+
 @app.route('/api/izin', methods=['POST'])
 def ajukan_izin():
     data = request.json
     id_staf = data.get('id_staf')
-    status_izin = data.get('status') # Berisi 'Izin' atau 'Sakit'
+    status_izin = data.get('status') # berisi 'Izin' atau 'Sakit'
     
     conn = None; cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Cek apakah staf sudah terlanjur Clock-In atau sudah lapor hari ini
+        # cek apakah staf sudah terlanjur Clock-In atau sudah lapor hari ini
         cursor.execute("SELECT * FROM presensi WHERE id_staf = %s AND tanggal = CURDATE()", (id_staf,))
         absen_hari_ini = cursor.fetchone()
         
         if absen_hari_ini:
             return jsonify({"status": "error", "message": "Anda sudah memiliki catatan kehadiran/izin hari ini."})
             
-        # Masukkan data ke database dengan status Izin/Sakit
+        # masukkan data ke database dengan status Izin/Sakit
         cursor.execute("""
             INSERT INTO presensi (id_staf, tanggal, status) 
             VALUES (%s, CURDATE(), %s)
@@ -1279,9 +1247,9 @@ def ajukan_izin():
         if conn: conn.close()
         
         
-# ==========================================
+
 # ENDPOINT ANALITIK PRESENSI (HISTORIS)
-# ==========================================
+
 @app.route('/api/presensi/rekap', methods=['GET'])
 def get_rekap_heatmap():
     bulan_req = request.args.get('bulan', default=datetime.now().month, type=int)
@@ -1295,7 +1263,7 @@ def get_rekap_heatmap():
         cursor.execute("SELECT COUNT(*) as total FROM staf")
         total_staf = cursor.fetchone()['total']
         
-        # 1. Total absen per hari (Untuk warna Heatmap)
+        # 1. total absen per hari (untuk warna heatmap)
         cursor.execute("""
             SELECT DAY(tanggal) as hari, COUNT(*) as total_absen 
             FROM presensi 
@@ -1304,7 +1272,7 @@ def get_rekap_heatmap():
         """, (bulan_req, tahun_req))
         rekap_harian = cursor.fetchall()
         
-        # 2. Total distribusi bulanan (Untuk Pie Chart awal)
+        # 2. total distribusi bulanan (untuk pie chart awal)
         cursor.execute("""
             SELECT status, COUNT(*) as jumlah 
             FROM presensi 
@@ -1313,7 +1281,7 @@ def get_rekap_heatmap():
         """, (bulan_req, tahun_req))
         rekap_status = cursor.fetchall()
 
-        # 3. BARU: Rincian status spesifik PER HARI (Untuk Pie Chart saat diklik)
+        # 3. rincian status spesifik per hari (untuk pie chart saat diklik)
         cursor.execute("""
             SELECT DAY(tanggal) as hari, status, COUNT(*) as jumlah 
             FROM presensi 
@@ -1336,17 +1304,14 @@ def get_rekap_heatmap():
         if conn: conn.close()
                                                                                          
 
-# ==========================================
 # ENDPOINT HOUSEKEEPING (PETA KAMAR)
-# ==========================================
+
 @app.route('/api/kamar', methods=['GET'])
 def get_semua_kamar():
     conn = None; cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
-        # Mengambil semua kamar diurutkan dari nomor terkecil
         cursor.execute("SELECT * FROM kamar ORDER BY nomor_kamar ASC")
         kamar_list = cursor.fetchall()
         
@@ -1358,17 +1323,15 @@ def get_semua_kamar():
         if conn: conn.close()
         
         
-# ==========================================
+
 # ENDPOINT DROPDOWN STAF HOUSEKEEPING
-# ==========================================
+
 @app.route('/api/staf-housekeeping', methods=['GET'])
 def get_staf_hk():
     conn = None; cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
-        # Menggunakan SELECT * agar tidak terbentur masalah nama kolom (nama_staf vs nama_lengkap)
         cursor.execute("SELECT * FROM staf WHERE id_posisi = 1")
         staf_hk = cursor.fetchall()
         
@@ -1380,17 +1343,15 @@ def get_staf_hk():
         if conn: conn.close()
         
 
-# ==========================================
+
 # ENDPOINT RIWAYAT PRESENSI STAF (PORTAL)
-# ==========================================
+
 @app.route('/api/presensi/riwayat/<int:id_staf>', methods=['GET'])
 def get_riwayat_presensi_portal(id_staf):
     conn = None; cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
-        # Ambil data presensi dari yang terbaru
         cursor.execute("""
             SELECT 
                 DATE_FORMAT(tanggal, '%d %M %Y') as tanggal, 
@@ -1403,7 +1364,6 @@ def get_riwayat_presensi_portal(id_staf):
         """, (id_staf,))
         riwayat = cursor.fetchall()
         
-        # Format tipe data 'waktu' agar aman dibaca oleh JSON/JavaScript
         for baris in riwayat:
             if baris['waktu_masuk']:
                 baris['waktu_masuk'] = str(baris['waktu_masuk'])
@@ -1418,16 +1378,15 @@ def get_riwayat_presensi_portal(id_staf):
         if conn: conn.close()
         
         
-# ==========================================
+
 # 1. API AMBIL 1 DATA STAF (Pakai kode_staf)
-# ==========================================
+
 @app.route('/api/staf/<kode_staf>', methods=['GET'])
 def get_staf_detail(kode_staf):
     conn = None; cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        # Cari berdasarkan kode_staf (Misal: HK-004)
         cursor.execute("SELECT * FROM staf WHERE kode_staf = %s", (kode_staf,))
         staf = cursor.fetchone()
         if staf: return jsonify(staf)
@@ -1437,9 +1396,9 @@ def get_staf_detail(kode_staf):
         if cursor: cursor.close()
         if conn: conn.close()
 
-# ==========================================
+
 # 2. API EDIT DATA STAF (Pakai kode_staf)
-# ==========================================
+
 @app.route('/api/staf/<kode_staf>', methods=['PUT'])
 def edit_staf(kode_staf):
     data = request.json
@@ -1447,7 +1406,6 @@ def edit_staf(kode_staf):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Update berdasarkan kode_staf
         cursor.execute("""
             UPDATE staf 
             SET nama_staf = %s, id_posisi = %s, nomor_telepon = %s, username = %s 
@@ -1460,16 +1418,15 @@ def edit_staf(kode_staf):
         if cursor: cursor.close()
         if conn: conn.close()
 
-# ==========================================
+
 # 3. API HAPUS STAF (Pakai kode_staf)
-# ==========================================
+
 @app.route('/api/staf/<kode_staf>', methods=['DELETE'])
 def hapus_staf(kode_staf):
     conn = None; cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Hapus berdasarkan kode_staf
         cursor.execute("DELETE FROM staf WHERE kode_staf = %s", (kode_staf,))
         conn.commit()
         return jsonify({'status': 'success', 'message': 'Data staf berhasil dihapus'})
@@ -1479,9 +1436,9 @@ def hapus_staf(kode_staf):
         if conn: conn.close()
         
 
-# ==========================================
+
 # API AMBIL DETAIL KAMAR
-# ==========================================
+
 @app.route('/api/tipe-kamar/<int:id_tipe>', methods=['GET'])
 def get_detail_kamar(id_tipe):
     conn = None; cursor = None
@@ -1502,16 +1459,15 @@ def get_detail_kamar(id_tipe):
         if conn: conn.close()
         
         
-# ==========================================
+
 # API AMBIL SEMUA DAFTAR TIPE KAMAR (Katalog Halaman Utama)
-# ==========================================
+
 @app.route('/api/tipe-kamar', methods=['GET'])
-def get_semua_tipe_kamar():  # <--- NAMA FUNGSI SUDAH DIBEDAKAN
+def get_semua_tipe_kamar():
     conn = None; cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        # Ambil semua data dari tabel tipe_kamar
         cursor.execute("SELECT * FROM tipe_kamar")
         kamar_all = cursor.fetchall()
         
@@ -1523,9 +1479,8 @@ def get_semua_tipe_kamar():  # <--- NAMA FUNGSI SUDAH DIBEDAKAN
         if conn: conn.close()
         
                                                
-# ==========================================
+
 # MENJALANKAN SERVER
-# ==========================================
+
 if __name__ == '__main__':
-    # debug=True membuat server langsung memperbarui diri jika ada kode yang diubah
     app.run(debug=True, port=5000)

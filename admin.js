@@ -1,6 +1,4 @@
-// ==========================================
 // SISTEM KEAMANAN & OTORISASI HALAMAN
-// ==========================================
 
 const isAdminMaster = sessionStorage.getItem('isAdminMaster');
 
@@ -9,9 +7,9 @@ if (isAdminMaster !== 'true') {
     window.location.href = 'login.html';
 }
 
-// =========================================================================
+
 // KONTROL UTAMA & ROUTER INTERFACES
-// =========================================================================
+
 function switchSection(sectionId, element) {
     document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active'));
     document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
@@ -42,7 +40,6 @@ document.addEventListener('DOMContentLoaded', function() {
     muatDaftarStaf();
     muatAnalitik();
 
-    // ... (Sisa baris 43 dan seterusnya biarkan saja persis seperti aslinya)
     const btnTambahHK = document.getElementById('btn-tambah-hk');
     if (btnTambahHK) {
         btnTambahHK.addEventListener('click', simpanTugasHousekeeping);
@@ -61,43 +58,43 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
         }
-    }, 15000); // 15000 milidetik = Refresh otomatis setiap 15 Detik
+    }, 15000);
 });
 
 const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
-// =========================================================================
+
 // PULLER DATA INTEGRASI BACKEND & REAL-TIME INVOICES
-// =========================================================================
+
 function loadAdminData() {
     fetch('http://127.0.0.1:5000/api/admin-dashboard')
     .then(res => res.json())
     .then(data => {
         if(data.status === 'success') {
-            // Update Ringkasan Atas
+            // update ringkasan atas
             document.getElementById('ov-okupansi').textContent = data.okupansi + "%";
             document.getElementById('ov-okupansi-bar').style.width = data.okupansi + "%";
             document.getElementById('ov-checkin').textContent = data.checkin;
             document.getElementById('ov-checkout').textContent = data.checkout;
             document.getElementById('ov-pendapatan').textContent = formatRupiah(data.pendapatan);
 
-            // Update Status Tagihan
+            // ppdate status tagihan
             document.getElementById('ov-inv-lunas').textContent = data.invoice['Lunas'] || 0;
             document.getElementById('ov-inv-dp').textContent = data.invoice['DP Dibayar'] || 0;
             document.getElementById('ov-inv-belum').textContent = data.invoice['Belum Dibayar'] || 0;
 
-            // Update Tabel Reservasi
+            // pduate tabel reservasi
             const tbody = document.getElementById('table-res-body');
             tbody.innerHTML = '';
             
             data.reservasi.forEach(r => {
-                // Label Pembayaran
+                // label pembayaran
                 let badgeStatus = '';
                 if (r.status_pembayaran === 'Lunas') badgeStatus = '<span class="badge badge-lunas">PAID / LUNAS</span>';
                 else if (r.status_pembayaran === 'DP Dibayar') badgeStatus = '<span class="badge badge-dp">PARTIAL / DP 50%</span>';
                 else badgeStatus = '<span class="badge badge-belum">UNPAID / PENDING</span>';
 
-                // Tombol Aksi Dinamis
+                // tombol aksi dinamis
                 let btnAksi = '';
                 if (r.status_pesanan === 'Menunggu') {
                     btnAksi = `
@@ -107,9 +104,6 @@ function loadAdminData() {
                         <button class="btn btn-sm btn-danger btn-action" onclick="prosesReservasi('${r.id_reservasi}', 'Batal')">Batal</button>
                     `;
                 } else if (r.status_pesanan === 'Aktif') {
-                    // =========================================================================
-                    // INI PERUBAHANNYA: Menambahkan parameter ketiga '${r.status_pembayaran}'
-                    // =========================================================================
                     btnAksi = `
                         <button class="btn btn-sm btn-warning btn-action" onclick="prosesReservasi('${r.id_reservasi}', 'Selesai', '${r.status_pembayaran}')">
                             <i class="fa-solid fa-right-from-bracket"></i> Check-Out
@@ -135,9 +129,9 @@ function loadAdminData() {
     .catch(err => console.error("Gagal menarik data admin:", err));
 }
 
-// =========================================================================
+
 // ENGINE PENCARIAN & FILTER TABEL MANAGEMENT
-// =========================================================================
+
 function filterReservasiTable() {
     const keyword = document.getElementById('search-res').value.toLowerCase();
     const filterBayar = document.getElementById('filter-status-bayar').value;
@@ -158,9 +152,9 @@ function filterReservasiTable() {
     });
 }
 
-// =========================================================================
+
 // MODUL HOUSEKEEPING CONTROL & DELEGASI STAF
-// =========================================================================
+
 function populateStafDropdown() {
     fetch('http://127.0.0.1:5000/api/staf-housekeeping')
     .then(res => res.json())
@@ -185,24 +179,18 @@ function renderPetaKamarAsli() {
     .then(data => {
         if (data.status === 'success') {
             const container = document.getElementById('container-room-grid');
-            container.innerHTML = ''; // Bersihkan kontainer lama
+            container.innerHTML = '';
 
-            // Objek untuk mengelompokkan data kamar berdasarkan lantai
             const roomsByFloor = {};
 
             data.data.forEach(rm => {
-                // PAKSA menjadi String terlebih dahulu agar aman dari crash tipe data
                 let nomorKamarStr = String(rm.nomor_kamar);
-                
-                // Jika nomor kamar di MySQL berupa angka biasa (misal 101, 205), gunakan cara ini:
-                // Jika panjangnya 3 digit, lantai adalah karakter pertama. Jika 4 digit, 2 karakter pertama.
                 let lantai = 1;
                 if (nomorKamarStr.length === 3) {
-                    lantai = parseInt(nomorKamarStr.substring(0, 1), 10); // 101 -> Lantai 1
+                    lantai = parseInt(nomorKamarStr.substring(0, 1), 10);
                 } else if (nomorKamarStr.length === 4) {
-                    lantai = parseInt(nomorKamarStr.substring(0, 2), 10); // 1205 -> Lantai 12
+                    lantai = parseInt(nomorKamarStr.substring(0, 2), 10);
                 } else {
-                    // Jika nomor kamarmu berformat teks "0301", logika aslimu di bawah ini akan aktif otomatis:
                     lantai = parseInt(nomorKamarStr.substring(0, 2), 10);
                 }
                 
@@ -212,15 +200,15 @@ function renderPetaKamarAsli() {
                 roomsByFloor[lantai].push(rm);
             });
 
-            // Loop untuk menggambar setiap lantai ke layar
+            // menggambar setiap lantai ke layar
             for (const lantai in roomsByFloor) {
-                // 1. Buat Sekat/Pemisah Lantai
+                // 1. sekat lantai
                 let floorHeader = document.createElement('div');
                 floorHeader.className = 'floor-divider';
                 floorHeader.innerHTML = `<i class="fa-solid fa-layer-group"></i> Area Lantai ${lantai}`;
                 container.appendChild(floorHeader);
 
-                // 2. Buat Grid Kamar Khusus untuk Lantai Tersebut
+                // 2. grid kamar
                 let grid = document.createElement('div');
                 grid.className = 'room-grid';
 
@@ -229,9 +217,9 @@ function renderPetaKamarAsli() {
                     box.className = `room-box ${rm.status_visual}`;
                     box.innerHTML = `<i class="fa-solid fa-door-closed mb-1"></i> ${rm.nomor_kamar}`;
                     
-                    // Sensor klik dinamis untuk berbagai warna kamar
+                    // sensor klik dinamis untuk berbagai warna kamar
                     box.onclick = function() {
-                        // 1. JIKA KAMAR BIRU (Aktif) ATAU UNGU (Menunggu) DIKLIK (Munculkan Modal Detail Tamu)
+                        // 1. jika kamar biru (Aktif) atau ungu (Menunggu) diklik (muncul detail tamu)
                         if (rm.status_visual === 'rm-occupied' || rm.status_visual === 'rm-booked') {
                             fetch(`http://127.0.0.1:5000/api/detail-kamar-aktif?nomor_kamar=${rm.nomor_kamar}`)
                                 .then(res => res.json())
@@ -261,14 +249,14 @@ function renderPetaKamarAsli() {
                                     Swal.fire('Error!', "Koneksi ke server gagal.", 'error');
                                 });
                         } 
-                        // 2. JIKA KAMAR KUNING DIKLIK (Kotor / Jeda)
+                        // 2. jika kamar kuning diklik (Kotor / Jeda)
                         else if (rm.status_visual === 'rm-dirty') {
-                            // Isi form target secara otomatis
+                            // isi form target secara otomatis
                             document.getElementById('hk-no-kamar').value = rm.nomor_kamar;
                             let inputIdKamar = document.getElementById('hk-id-kamar');
                             if (inputIdKamar) inputIdKamar.value = rm.id_kamar;
 
-                            // Munculkan Pop-up SweetAlert Kuning
+                            // pop-up SweetAlert kuning
                             Swal.fire({
                                 title: 'Kamar Perlu Dibersihkan!',
                                 text: `Kamar ${rm.nomor_kamar} berstatus Kotor/Jeda. Nomor kamar telah otomatis dimasukkan ke formulir Surat Tugas di sebelah kiri.`,
@@ -277,7 +265,7 @@ function renderPetaKamarAsli() {
                                 confirmButtonText: 'Oke, Siapkan Tugas!'
                             });
                         }
-                        // 3. JIKA KAMAR HIJAU ATAU ABU-ABU DIKLIK (Bersih / Perbaikan)
+                        // 3. jika kamar hijau atau ab-abu diklik (Bersih / Perbaikan)
                         else {
                             let labelStatus = '';
                             let warnaTombol = '';
@@ -285,11 +273,11 @@ function renderPetaKamarAsli() {
 
                             if (rm.status_visual === 'rm-clean') {
                                 labelStatus = 'Bersih / Tersedia';
-                                warnaTombol = '#198754'; // Hijau Bootstrap
+                                warnaTombol = '#198754';
                                 ikonTipe = 'success';
                             } else if (rm.status_visual === 'rm-repair') {
                                 labelStatus = 'Perbaikan (Maintenance)';
-                                warnaTombol = '#6c757d'; // Abu-abu Bootstrap
+                                warnaTombol = '#6c757d';
                                 ikonTipe = 'info';
                             }
                             
@@ -306,8 +294,6 @@ function renderPetaKamarAsli() {
                     };
                     grid.appendChild(box);
                 });
-                
-                // Masukkan grid lantai ini ke dalam kontainer utama
                 container.appendChild(grid);
             }
         }
@@ -315,7 +301,7 @@ function renderPetaKamarAsli() {
     .catch(err => console.error("Gagal memuat data real-time peta kamar:", err));
 }
 
-// Submit form penugasan staf kebersihan
+// submit form penugasan staf kebersihan
 const formTugaskan = document.getElementById('form-tugaskan-staf');
 if (formTugaskan) {
     formTugaskan.addEventListener('submit', function(e) {
@@ -338,19 +324,16 @@ if (formTugaskan) {
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
-                // Pop-up Sukses Elegan
                 Swal.fire({
                     title: 'Berhasil!',
-                    text: data.message, // Menampilkan pesan dari Python
+                    text: data.message,
                     icon: 'success',
                     confirmButtonColor: '#198754',
                     confirmButtonText: 'Tutup'
                 }).then(() => {
-                    // Menggunakan kode reset pintarmu
                     document.getElementById('form-tugaskan-staf').reset();
                 });
             } else {
-                // Pop-up Gagal Elegan
                 Swal.fire('Gagal!', data.message, 'error');
             }
         });
@@ -365,10 +348,10 @@ function simulasiKamarSiap() {
 }
 
 
-// Fungsi mengirim perintah ubah status ke Python
+// mengirim perintah ubah status ke Python
 function prosesReservasi(id_reservasi, statusBaru, statusBayar = 'Lunas') {
     
-    // Cegah Check-Out jika tagihan belum lunas
+    // cegah Check-Out jika tagihan belum lunas
     if (statusBaru === 'Selesai' && statusBayar !== 'Lunas') {
         Swal.fire({
             title: 'Tindakan Ditolak!',
@@ -377,25 +360,24 @@ function prosesReservasi(id_reservasi, statusBaru, statusBayar = 'Lunas') {
             confirmButtonColor: '#d33',
             confirmButtonText: 'Mengerti'
         });
-        return; // Hentikan fungsi di sini, jangan hubungi server
+        return;
     }
-    // ========================================================
 
-    // Logika cerdas untuk 3 status berbeda (Check-In, Check-Out, Batal)
+    // logika untuk 3 status berbeda (Check-In, Check-Out, Batal)
     let warnaTombol, teksTombol, teksTanya, ikonSweet;
 
     if (statusBaru === 'Aktif') {
-        warnaTombol = '#198754'; // Hijau untuk masuk
+        warnaTombol = '#198754'; // hijau untuk masuk
         teksTombol = 'Ya, Check-In!';
         teksTanya = 'melakukan Check-In';
         ikonSweet = 'question';
     } else if (statusBaru === 'Selesai') {
-        warnaTombol = '#0d6efd'; // Biru untuk selesai
+        warnaTombol = '#0d6efd'; // biru untuk selesai
         teksTombol = 'Ya, Check-Out!';
         teksTanya = 'melakukan Check-Out (menyelesaikan pesanan)';
         ikonSweet = 'info';
     } else {
-        warnaTombol = '#d33'; // Merah untuk batal
+        warnaTombol = '#d33'; // merah untuk batal
         teksTombol = 'Ya, Batalkan!';
         teksTanya = 'membatalkan pesanan';
         ikonSweet = 'warning';
@@ -413,8 +395,6 @@ function prosesReservasi(id_reservasi, statusBaru, statusBayar = 'Lunas') {
         backdrop: `rgba(0,0,0,0.5)`
     }).then((result) => {
         if (result.isConfirmed) {
-            
-            // Tampilkan animasi loading saat memproses
             Swal.fire({
                 title: 'Memproses...',
                 text: 'Menghubungi server...',
@@ -423,8 +403,6 @@ function prosesReservasi(id_reservasi, statusBaru, statusBayar = 'Lunas') {
                     Swal.showLoading();
                 }
             });
-
-            // Kirim ke server
             fetch('http://127.0.0.1:5000/api/update-reservasi', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -433,15 +411,14 @@ function prosesReservasi(id_reservasi, statusBaru, statusBayar = 'Lunas') {
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success') {
-                    // Pop-up Berhasil
                     Swal.fire({
                         title: 'Berhasil!',
                         text: `Pesanan ${id_reservasi} berhasil diperbarui.`,
                         icon: 'success',
                         confirmButtonColor: warnaTombol
                     }).then(() => {
-                        loadAdminData(); // Segarkan tabel otomatis
-                        renderPetaKamarAsli(); // Segarkan peta kamar otomatis
+                        loadAdminData();
+                        renderPetaKamarAsli();
                     });
                 } else {
                     Swal.fire('Gagal!', "Pesan: " + data.message, 'error');
@@ -457,37 +434,35 @@ function prosesReservasi(id_reservasi, statusBaru, statusBayar = 'Lunas') {
 
 
 
-// Fungsi untuk memproses penambahan tugas Housekeeping ke database
+// memproses penambahan tugas Housekeeping ke database
 function simpanTugasHousekeeping() {
-    // 1. Ambil data dari elemen-elemen form di Gambar 1
-    // Asumsi ID elemen: hk-no-kamar (input), hk-id-kamar (hidden input untuk ID asli), hk-pilih-staf (select), hk-tanggal (input)
     const idKamar = document.getElementById('hk-id-kamar').value; 
     const noKamar = document.getElementById('hk-no-kamar').value;
     const idStaf = document.getElementById('hk-pilih-staf').value;
     const tanggalTugas = document.getElementById('hk-tanggal').value;
 
-    // Validasi sederhana di sisi klien
+    // validasi sederhana di sisi klien
     if (!idStaf) {
         alert("Mohon pilih staf Housekeeping terlebih dahulu.");
         return;
     }
 
-    // Tampilkan konfirmasi
+    // tampilkan konfirmasi
     if(confirm(`Konfirmasi penugasan untuk Kamar ${noKamar} pada tanggal ${tanggalTugas}?`)) {
         
-        // Nonaktifkan tombol agar tidak diklik dua kali saat memproses
-        const btn = document.getElementById('btn-tambah-hk'); // Asumsi ID tombol '+ Tambah Tugas'
+        // nonaktifkan tombol agar tidak diklik dua kali saat memproses
+        const btn = document.getElementById('btn-tambah-hk');
         if(btn) { btn.textContent = "MEMPROSES..."; btn.disabled = true; }
 
-        // 2. Siapkan data dalam format JSON
+        // siapkan data dalam format JSON
         const dataPayload = {
             id_kamar: idKamar,
             id_staf: idStaf,
             tanggal_tugas: tanggalTugas,
-            id_reservasi: null // Set NULL sementara untuk pembersihan rutin
+            id_reservasi: null
         };
 
-        // 3. Kirim data ke API Python Flask yang baru kita buat
+        // kirim data ke API Python Flask
         fetch('http://127.0.0.1:5000/api/tambah-housekeeping', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -497,11 +472,9 @@ function simpanTugasHousekeeping() {
         .then(data => {
             if(data.status === 'success') {
                 alert(data.message);
-                // Reset form di Gambar 1 agar bersih kembali
                 document.getElementById('hk-id-kamar').value = '';
                 document.getElementById('hk-no-kamar').value = 'Pilih Kamar di Peta';
                 document.getElementById('hk-pilih-staf').value = ''; 
-                // Opsional: Muat ulang data dashboard HK jika ada tabel daftarnya
             } else {
                 alert("Gagal menyimpan tugas: " + data.message);
             }
@@ -511,15 +484,15 @@ function simpanTugasHousekeeping() {
             alert("Terjadi kesalahan koneksi ke peladen Python.");
         })
         .finally(() => {
-            // Aktifkan kembali tombolnya
+            // kktifkan kembali tombolnya
             if(btn) { btn.textContent = "+ Tambah Tugas"; btn.disabled = false; }
         });
     }
 }
 
-// ==========================================
+
 // FUNGSI MEMUAT DAFTAR KARYAWAN (FULL WIDTH)
-// ==========================================
+
 async function muatDaftarStaf() {
     const tbody = document.getElementById('table-karyawan-body');
     const labelTotal = document.getElementById('total-staf');
@@ -541,21 +514,21 @@ async function muatDaftarStaf() {
             result.data.forEach(staf => {
                 console.log("Data staf:", staf);        
 
-                // 1. Buat Email buatan dari Username
+                // buat Email buatan dari Username
                 const emailPerusahaan = `${staf.username}@hotelreservasi.com`;
                 
-                // 2. Format Waktu
+                // format Waktu
                 const jamMasuk = staf.waktu_masuk ? `<span class="fw-bold text-success">${staf.waktu_masuk}</span>` : '<span class="text-muted">-</span>';
                 const jamPulang = staf.waktu_pulang ? `<span class="fw-bold text-danger">${staf.waktu_pulang}</span>` : '<span class="text-muted">-</span>';
                 
-                // 3. Desain Lencana Status
+                // desain status
                 let badgeStatus = '<span class="badge bg-light text-secondary border">Belum Hadir</span>';
                 if (staf.status === 'Hadir') badgeStatus = '<span class="badge bg-success">Hadir</span>';
                 else if (staf.status === 'Sakit') badgeStatus = '<span class="badge bg-warning text-dark">Sakit</span>';
                 else if (staf.status === 'Izin') badgeStatus = '<span class="badge bg-info text-dark">Izin</span>';
                 else if (staf.status === 'Mangkir') badgeStatus = '<span class="badge bg-danger">Mangkir</span>';
 
-                // 4. Susun Baris Tabel
+                // susun baris tabel
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="ps-4 fw-bold text-muted">${staf.kode_staf}</td>
@@ -585,9 +558,9 @@ async function muatDaftarStaf() {
     }
 }
 
-// ==========================================
+
 // ANALITIK: PIE CHART & HEATMAP (INTERAKTIF & TIME TRAVEL)
-// ==========================================
+
 let tanggalAnalitik = new Date(); 
 let pieChartInstance = null; 
 
@@ -681,7 +654,7 @@ async function muatAnalitik() {
                 });
             }
 
-            // --- 1. LUKIS KOTAK HEATMAP ---
+            // kotak heatmap
             container.innerHTML = ''; 
             const namaHari = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
             namaHari.forEach(hari => { container.innerHTML += `<div class="text-center small fw-bold text-muted mb-2">${hari}</div>`; });
@@ -708,7 +681,7 @@ async function muatAnalitik() {
                 `;
             }
 
-            // --- 2. INISIALISASI KANVAS PIE CHART ---
+            // inisialisasi pie chart
             const ctx = document.getElementById('absensiPieChart');
             if (pieChartInstance) { pieChartInstance.destroy(); }
             
@@ -734,7 +707,7 @@ async function muatAnalitik() {
                 }
             });
 
-            // --- 3. PASANG DATA SEBAGAI TAMPILAN AWAL ---
+            // data
             const waktuAsli = new Date();
         
             if (tahun === waktuAsli.getFullYear() && bulan === waktuAsli.getMonth()) {
@@ -749,9 +722,9 @@ async function muatAnalitik() {
 }
 
 
-// ==========================================
+
 // FUNGSI MENGHAPUS STAF (TOMBOL SAMPAH)
-// ==========================================
+
 async function hapusStaf(idStaf) {
     const konfirmasi = await Swal.fire({
         title: 'Berhentikan Staf?',
@@ -766,7 +739,6 @@ async function hapusStaf(idStaf) {
 
     if (konfirmasi.isConfirmed) {
         try {
-            // Mengirim perintah DELETE ke Python
             const response = await fetch(`http://127.0.0.1:5000/api/staf/${idStaf}`, {
                 method: 'DELETE'
             });
@@ -774,7 +746,6 @@ async function hapusStaf(idStaf) {
 
             if (data.status === 'success') {
                 Swal.fire('Terhapus!', 'Staf berhasil diberhentikan.', 'success');
-                // Refresh tabel otomatis (GANTI dengan nama fungsi pemanggil tabel Anda)
                 muatDaftarStaf(); 
             } else {
                 Swal.fire('Gagal!', data.message, 'error');
@@ -785,18 +756,17 @@ async function hapusStaf(idStaf) {
     }
 }
 
-// ==========================================
+
 // FUNGSI MENGEDIT STAF (ALIHKAN KE HALAMAN BARU)
-// ==========================================
+
 function editStaf(kodeStaf) {
     window.location.href = `edit-staf.html?id=${kodeStaf}`;
 }
 
 
-// ==========================================
+
 // JALANKAN SAAT HALAMAN DIMUAT
-// ==========================================
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Panggil fungsi pemuat tabel staf
     muatDaftarStaf();
 });

@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Ambil parameter id reservasi dan email dari URL browser
+    // ambil parameter id reservasi dan email dari URL browser
     const urlParams = new URLSearchParams(window.location.search);
     const idReservasi = urlParams.get('id');
     const email = urlParams.get('email');
@@ -11,14 +11,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Tarik data asli dari database lewat API Python Flask
+    // tarik data asli dari database lewat API Python Flask
     fetch(`http://127.0.0.1:5000/api/cek-pesanan?id=${idReservasi}&email=${email}`)
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
                 const p = data.data;
                 
-                // Suntik data ke elemen-elemen HTML pembungkus
+                // suntik data ke elemen-elemen HTML pembungkus
                 document.getElementById('v-id').textContent = p.id_reservasi;
                 document.getElementById('v-nama').textContent = p.nama_lengkap;
                 document.getElementById('v-telepon').textContent = p.nomor_telepon;
@@ -30,30 +30,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('v-total').textContent = formatRupiah(p.harga_terkunci);
                 document.getElementById('v-transaksi').innerText = p.referensi_transaksi || 'Belum Ada Transaksi';
 
-                // Definisikan komponen kontrol tombol aksi
+                // definisikan komponen kontrol tombol aksi
                 const statusBadge = document.getElementById('v-status');
                 const btnBayar = document.getElementById('btn-bayar-sekarang');
                 const btnBatal = document.getElementById('btn-batal-pesanan');
                 const opsiBayar = document.getElementById('opsi-bayar-container');
                 const selectBayar = document.getElementById('pilihan-bayar');
 
-                // 1. Validasi Status Pembatalan Pesanan
+                // 1. validasi status pembatalan pesanan
                 if (p.status_pesanan === 'Batal') {
                     statusBadge.textContent = 'CANCELED / BATAL';
                     statusBadge.style.borderColor = '#d9534f';
                     statusBadge.style.color = '#d9534f';
-                    btnBatal.style.display = 'none'; // Sembunyikan tombol karena sudah batal
+                    btnBatal.style.display = 'none';
                     btnBayar.style.display = 'none';
                     opsiBayar.style.display = 'none';
                 } else {
-                    // Tombol pembatalan otomatis muncul selama tamu belum melakukan Check-In
+                    // tombol pembatalan otomatis muncul selama tamu belum melakukan Check-In
                     if (p.status_pesanan !== 'Check-In' && p.status_pesanan !== 'Selesai') {
                         btnBatal.style.display = 'block';
                     } else {
                         btnBatal.style.display = 'none';
                     }
 
-                    // 2. Validasi Lapisan Status Transaksi Pembayaran Invoice
+                    // 2. validasi lapisan status transaksi pembayaran invoice
                     if (p.status_pembayaran === 'Lunas') {
                         statusBadge.textContent = 'PAID / LUNAS';
                         statusBadge.style.borderColor = '#154230';
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         statusBadge.style.borderColor = '#A6824A';
                         statusBadge.style.color = '#A6824A';
                         
-                        // Tamu sudah DP, batasi opsi bayar hanya untuk pelunasan sisa tagihan
+                        // tamu sudah dp, batasi opsi bayar hanya untuk pelunasan sisa tagihan
                         opsiBayar.style.display = 'block';
                         selectBayar.innerHTML = '<option value="Lunas">Lunasi Sisa Tagihan (50%)</option>';
                         btnBayar.style.display = 'block';
@@ -76,15 +76,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         statusBadge.style.borderColor = '#5D1E21';
                         statusBadge.style.color = '#5D1E21';
                         
-                        // Belum bayar sama sekali, bebaskan memilih DP atau Lunas
+                        // belum bayar sama sekali, bebaskan memilih dp atau Lunas
                         opsiBayar.style.display = 'block';
                         btnBayar.style.display = 'block';
                     }
                 }
 
-                // Handler Eksekusi Pembayaran Rekening Invoice
+                // dandler eksekusi pembayaran rekening invoice
                 btnBayar.onclick = function() {
-                    // INI BARIS YANG SEMPAT HILANG:
                     const nominalPilihan = selectBayar.value;
 
                     Swal.fire({
@@ -99,11 +98,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         backdrop: `rgba(0,0,0,0.4)`
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // 1. Ubah tombol jadi loading
                             btnBayar.textContent = "MEMPROSES TRANSAKSI...";
                             btnBayar.disabled = true;
 
-                            // 2. Kirim data ke Python
                             fetch('http://127.0.0.1:5000/api/proses-bayar', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -115,17 +112,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             .then(res => res.json())
                             .then(dataBayar => {
                                 if(dataBayar.status === 'success') {
-                                    // Pop-up sukses cantik
                                     Swal.fire({
                                         title: 'Berhasil!',
                                         text: 'Pembayaran Diverifikasi! Status invoice diperbarui.',
                                         icon: 'success',
                                         confirmButtonColor: '#198754'
                                     }).then(() => {
-                                        window.location.reload(); // Reload otomatis
+                                        window.location.reload();
                                     });
                                 } else {
-                                    // Pop-up gagal cantik
                                     Swal.fire('Gagal!', "Pesan: " + dataBayar.message, 'error');
                                     btnBayar.textContent = "💳 PROSES PEMBAYARAN";
                                     btnBayar.disabled = false;
@@ -140,25 +135,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 };
 
-                // Handler Eksekusi Pembatalan Alokasi Kamar
+                // handler eksekusi pembatalan alokasi kamar
                 btnBatal.onclick = function() {
                     Swal.fire({
                         title: 'Batalkan Pesanan?',
                         text: "PERINGATAN: Apakah Anda yakin ingin membatalkan pesanan ini? Kamar akan dikembalikan ke pool ketersediaan.",
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonColor: '#d33',    // Warna Merah untuk aksi membatalkan
-                        cancelButtonColor: '#6c757d',  // Warna Abu-abu untuk tutup/kembali
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
                         confirmButtonText: 'Ya, Batalkan!',
                         cancelButtonText: 'Tidak, Kembali',
-                        backdrop: `rgba(0,0,0,0.6)`    // Latar belakang sedikit lebih gelap
+                        backdrop: `rgba(0,0,0,0.6)`
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // 1. Ubah tombol jadi loading
                             btnBatal.textContent = "MEMBATALKAN...";
                             btnBatal.disabled = true;
 
-                            // 2. Kirim perintah ke backend Python
                             fetch('http://127.0.0.1:5000/api/batal-pesanan', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -167,17 +160,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             .then(res => res.json())
                             .then(dataBatal => {
                                 if(dataBatal.status === 'success') {
-                                    // Pop-up sukses dibatalkan
                                     Swal.fire({
                                         title: 'Dibatalkan!',
                                         text: 'Pesanan berhasil dibatalkan. Kamar telah dikembalikan.',
                                         icon: 'success',
                                         confirmButtonColor: '#198754'
                                     }).then(() => {
-                                        window.location.reload(); // Reload halaman untuk perbarui status
+                                        window.location.reload();
                                     });
                                 } else {
-                                    // Pop-up gagal
                                     Swal.fire('Gagal!', "Pesan: " + dataBatal.message, 'error');
                                     btnBatal.textContent = "❌ BATALKAN PESANAN";
                                     btnBatal.disabled = false;
@@ -192,7 +183,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 };
 
-                // Tampilkan struktur kontainer utama setelah injeksi data selesai
                 document.getElementById('voucher-content').style.display = 'block';
             } else {
                 alert(data.message);

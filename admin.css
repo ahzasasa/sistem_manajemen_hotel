@@ -1,6 +1,4 @@
-/* ==========================================
-   VARIABEL & PENGATURAN DASAR
-   ========================================== */
+/* color palette */
 :root {
     --hotel-green: #154230;
     --hotel-gold: #A6824A;
@@ -16,9 +14,7 @@ body {
     overflow-x: hidden;
 }
 
-/* ==========================================
-   SIDEBAR NAVIGATION
-   ========================================== */
+/* sidebar */
 .sidebar {
     min-height: 100vh;
     background-color: var(--hotel-green);
@@ -67,9 +63,7 @@ body {
     border-left-color: var(--hotel-gold);
 }
 
-/* ==========================================
-   AREA KONTEN UTAMA
-   ========================================== */
+/* area konten utama */
 .main-content {
     margin-left: 240px;
     padding: 30px;
@@ -82,9 +76,7 @@ body {
     margin-bottom: 30px;
 }
 
-/* ==========================================
-   KARTU STATISTIK & KOMPONEN UI
-   ========================================== */
+/* ui */
 .card-stat {
     border: none;
     border-radius: 10px;
@@ -112,10 +104,7 @@ body {
 
 .btn-action { padding: 4px 10px; font-size: 13px; font-weight: 500; }
 
-/* ==========================================
-   VISUALISASI GRID KAMAR (HOUSEKEEPING)
-   ========================================== */
-   /* --- GRID PEMBUNGKUS LANTAI --- */
+/* grid kamar */
    .floor-divider {
        font-weight: bold;
        color: #495057;
@@ -135,7 +124,6 @@ body {
        margin-bottom: 20px;
    }
    
-   /* --- UKURAN DAN WARNA KOTAK KAMAR --- */
    .room-box {
        width: 75px;
        height: 75px;
@@ -155,27 +143,21 @@ body {
    .room-box:hover {
        transform: translateY(-4px);
    }
-   
-   /* Pemetaan Status Visual dari Query SQL */
-   .rm-clean { background-color: #198754 !important; }    /* Hijau */
-   .rm-occupied { background-color: #0d6efd !important; } /* Biru */
-   .rm-booked { background-color: #6f42c1 !important; }   /* Ungu */
-   .rm-dirty { background-color: #ffc107 !important; color: #212529 !important; }   /* Kuning */
-   .rm-repair { background-color: #6c757d !important; }  /* Abu-abu */
 
-/* ==========================================
-   PENGENDALI TAMPILAN SECTION
-   ========================================== */
+   .rm-clean { background-color: #198754 !important; }
+   .rm-occupied { background-color: #0d6efd !important; }
+   .rm-booked { background-color: #6f42c1 !important; }
+   .rm-dirty { background-color: #ffc107 !important; color: #212529 !important; }
+   .rm-repair { background-color: #6c757d !important; }
+
+/* section */
 .admin-section { display: none; }
 .admin-section.active { display: block; }
 
 
-/* ========================================== */
-/* KALENDER HEATMAP PRESENSI                  */
-/* ========================================== */
+/* heatmap presensi */
 #heatmap-calendar {
     display: grid;
-    /* Kunci lebar kolom menjadi 45px dan posisikan di tengah */
     grid-template-columns: repeat(7, 45px); 
     justify-content: center;
     gap: 8px;
@@ -185,7 +167,7 @@ body {
     width: 45px;
     height: 45px;
     border-radius: 4px;
-    background-color: #ebedf0; /* Warna dasar (0 Absen) */
+    background-color: #ebedf0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -201,12 +183,11 @@ body {
     z-index: 10;
 }
 
-/* Tingkatan Warna Absen (Abu-abu -> Kuning -> Merah) */
-.legend-0 { background-color: #ebedf0; color: #a1a1a1; } /* 0 Absen */
-.legend-1 { background-color: #ffe066; color: #7a5a00; } /* Sedikit Absen */
+.legend-0 { background-color: #ebedf0; color: #a1a1a1; }
+.legend-1 { background-color: #ffe066; color: #7a5a00; }
 .legend-2 { background-color: #ff9933; color: white; }   
 .legend-3 { background-color: #ff4d4d; color: white; }   
-.legend-4 { background-color: #cc0000; color: white; }   /* Banyak Absen */
+.legend-4 { background-color: #cc0000; color: white; }
 
 .legend-box {
     width: 15px;
@@ -215,11 +196,9 @@ body {
     margin: 0 4px;
 }
 
-
-/* Container pembungkus Chart agar bisa menaruh teks di tengah */
 .chart-wrapper {
     position: relative;
-    height: 250px; /* Ukuran diperbesar dari 180px */
+    height: 250px;
     width: 100%;
     margin: 0 auto;
 }
@@ -237,7 +216,7 @@ body {
     display: block;
     font-size: 2.2rem;
     font-weight: 800;
-    color: #dc3545; /* Warna merah agar kontras */
+    color: #dc3545;
     line-height: 1;
 }
 

@@ -1,10 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Jalankan inisialisasi halaman edit
     inisialisasiHalamanEdit();
 });
 
 async function inisialisasiHalamanEdit() {
-    // 1. Ambil ID dari URL (Misal: ?id=4)
+    // 1. ambil id dari URL
     const urlParams = new URLSearchParams(window.location.search);
     const idStaf = urlParams.get('id');
 
@@ -15,13 +14,11 @@ async function inisialisasiHalamanEdit() {
         return;
     }
 
-    // 2. Ambil data staf dari Backend untuk mengisi form otomatis
+    // 2. ambil data staf dari Backend untuk mengisi form otomatis
     try {
         const response = await fetch(`http://127.0.0.1:5000/api/staf/${idStaf}`);
         const result = await response.json();
 
-        // KOREKSI: Python mengembalikan data langsung (bukan result.data)
-        // Kita cek dari response HTTP-nya (ok = 200) dan memastikan ada nama_staf
         if (response.ok && result.nama_staf) {
             const staf = result; // Langsung gunakan result
             
@@ -40,7 +37,7 @@ async function inisialisasiHalamanEdit() {
         Swal.fire('Error!', 'Gagal menarik data dari server.', 'error');
     }
 
-    // 3. Tangani pengiriman data form (Submit)
+    // 3. tangani pengiriman data form
     const formEdit = document.getElementById('form-edit-staf');
     if (formEdit) {
         formEdit.addEventListener('submit', async function(e) {

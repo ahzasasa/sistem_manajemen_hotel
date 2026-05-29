@@ -1,11 +1,10 @@
-// ==========================================
-// 1. KEAMANAN & PENGATURAN IDENTITAS
-// ==========================================
+// KEAMANAN & PENGATURAN IDENTITAS
+
 if (sessionStorage.getItem('staf_logged_in') !== 'true') {
     window.location.href = 'login.html';
 }
 
-// Tarik data identitas dari sesi login
+// tarik data identitas dari sesi login
 const idStafAktif = sessionStorage.getItem('id_staf');
 const namaStafAktif = sessionStorage.getItem('staf_username') || 'Staf Housekeeping';
 
@@ -25,9 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     muatSlipGaji();
 });
 
-// ==========================================
-// 2. JAM & PRESENSI
-// ==========================================
+
+// JAM & PRESENSI
+
 function updateJam() {
     const now = new Date();
     document.getElementById('jam-digital').innerText = now.toLocaleTimeString('id-ID');
@@ -56,26 +55,21 @@ async function catatPresensi(tipe) {
                 showConfirmButton: false
             });
             
-            // --- LOGIKA BUKA-TUTUP TOMBOL (UPDATE) ---
+            // tutup-buka tombol
             if (tipe === 'Masuk') {
-                // 1. Kunci tombol Clock-In
                 document.getElementById('btn-masuk').disabled = true;
                 
-                // 2. Kunci juga tombol Sakit & Izin agar tidak dobel status
                 const btnSakit = document.getElementById('btn-sakit');
                 const btnIzin = document.getElementById('btn-izin');
                 if (btnSakit) btnSakit.disabled = true;
                 if (btnIzin) btnIzin.disabled = true;
                 
-                // 3. BUKA gembok Clock-Out
                 document.getElementById('btn-pulang').disabled = false; 
 
             } else if (tipe === 'Pulang') {
-                // Jika sudah pulang, kunci tombol Clock-Out
                 document.getElementById('btn-pulang').disabled = true;
             }
             
-            // Perbarui tabel riwayat secara otomatis
             if (typeof muatRiwayatPresensi === "function") {
                 muatRiwayatPresensi();
             }
@@ -87,9 +81,9 @@ async function catatPresensi(tipe) {
     }
 }
 
-// ==========================================
-// 3. LOGIKA PENARIKAN TUGAS DARI DATABASE
-// ==========================================
+
+// PENARIKAN TUGAS DARI DATABASE
+
 async function muatTugasStaf() {
     const container = document.getElementById('container-tugas');
     container.innerHTML = '<p class="text-muted">Sedang memeriksa tugas baru...</p>';
@@ -100,7 +94,7 @@ async function muatTugasStaf() {
 
         if (result.status === 'success') {
             const dataTugas = result.data;
-            container.innerHTML = ''; // Kosongkan tulisan loading
+            container.innerHTML = '';
 
             if (dataTugas.length === 0) {
                 container.innerHTML = `
@@ -111,7 +105,7 @@ async function muatTugasStaf() {
                 return;
             }
 
-            // Jika ada tugas, buatkan kartunya satu per satu
+            // jika ada tugas, buatkan kartunya satu per satu
             dataTugas.forEach(tugas => {
                 const card = document.createElement('div');
                 card.className = 'card p-3 task-card';
@@ -136,9 +130,9 @@ async function muatTugasStaf() {
     }
 }
 
-// ==========================================
-// 4. PENYELESAIAN TUGAS
-// ==========================================
+
+// PENYELESAIAN TUGAS
+
 function tandaiSelesai(idJadwal, idKamar, nomorKamar) {
     Swal.fire({
         title: `Konfirmasi Pembersihan`,
@@ -152,7 +146,6 @@ function tandaiSelesai(idJadwal, idKamar, nomorKamar) {
         if (result.isConfirmed) {
             
             try {
-                // Kirim laporan ke database Python
                 const response = await fetch('http://127.0.0.1:5000/api/selesai-tugas', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -164,7 +157,6 @@ function tandaiSelesai(idJadwal, idKamar, nomorKamar) {
                 if (data.status === 'success') {
                     Swal.fire('Laporan Terkirim!', `Kamar ${nomorKamar} telah diperbarui menjadi warna Hijau di layar Admin.`, 'success');
                     
-                    // Segarkan daftar tugas di layar
                     muatTugasStaf();
                 } else {
                     Swal.fire('Gagal!', data.message, 'error');
@@ -178,13 +170,8 @@ function tandaiSelesai(idJadwal, idKamar, nomorKamar) {
 
 
 function switchSection(sectionId, element) {
-    // 1. Sembunyikan semua section
     document.querySelectorAll('.staf-section').forEach(sec => sec.classList.remove('active'));
-    
-    // 2. Tampilkan section yang dipilih
     document.getElementById(sectionId).classList.add('active');
-
-    // 3. Update status aktif di nav
     document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
     element.classList.add('active');
 }
@@ -195,21 +182,19 @@ function logout() {
 }
 
 
-// ==========================================
-// 5. FUNGSI MEMUAT RIWAYAT PRESENSI DI TABEL
-// ==========================================
+
+// FUNGSI MEMUAT RIWAYAT PRESENSI DI TABEL
+
 async function muatRiwayatPresensi() {
-    // Sesuaikan ID tbody dengan yang ada di HTML-mu (asumsi: tbody-riwayat)
     const tbody = document.querySelector('table tbody'); 
     if (!tbody) return;
 
     try {
-        // Asumsi endpoint API-mu untuk mengambil riwayat berdasarkan ID staf
         const response = await fetch(`http://127.0.0.1:5000/api/presensi/riwayat/${idStafAktif}`);
         const result = await response.json();
 
         if (result.status === 'success') {
-            tbody.innerHTML = ''; // Bersihkan tabel
+            tbody.innerHTML = '';
 
             if (result.data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Belum ada riwayat presensi.</td></tr>';
@@ -217,33 +202,29 @@ async function muatRiwayatPresensi() {
             }
 
             result.data.forEach(item => {
-                // 1. TANGKAP NAMA KOLOM DENGAN TEPAT (Cocokkan dengan nama di MySQL-mu)
                 const waktuMasuk = item.waktu_masuk || item.jam_masuk || '-';
                 const waktuPulang = item.waktu_pulang || item.jam_keluar || '-';
 
-                // 2. HITUNG DURASI KERJA OTOMATIS
+                // durasi kerja
                 let teksDurasi = '<span class="text-muted fw-bold">Belum Selesai</span>';
                 
                 if (waktuMasuk !== '-' && waktuPulang !== '-') {
-                    // Ubah format string jam (HH:MM:SS) menjadi objek Date untuk dihitung
                     const masuk = new Date(`1970-01-01T${waktuMasuk}`);
                     const pulang = new Date(`1970-01-01T${waktuPulang}`);
-                    const selisihMs = pulang - masuk; // Hasilnya dalam milidetik
+                    const selisihMs = pulang - masuk;
 
-                    // Konversi ke Jam dan Menit
+                    // konversi jam ke menit
                     const jam = Math.floor(selisihMs / (1000 * 60 * 60));
                     const menit = Math.floor((selisihMs % (1000 * 60 * 60)) / (1000 * 60));
                     teksDurasi = `<span class="fw-bold text-dark">${jam} Jam ${menit} Menit</span>`;
                 }
 
-                // 3. ATUR WARNA BADGE STATUS
+                // warna badge status
                 let badgeStatus = 'bg-primary';
                 if (item.status === 'Sakit') badgeStatus = 'bg-warning text-dark';
                 if (item.status === 'Izin') badgeStatus = 'bg-info text-dark';
                 if (item.status === 'Mangkir') badgeStatus = 'bg-danger';
 
-                // 4. LUKIS KE DALAM TABEL
-                // Format tanggal bisa disesuaikan, untuk sementara kita cetak langsung
                 tbody.innerHTML += `
                     <tr class="align-middle text-center">
                         <td class="fw-bold">${item.tanggal}</td>
@@ -265,9 +246,9 @@ async function muatRiwayatPresensi() {
 }
 
 
-// ==========================================
-// 6. MANAJEMEN PROFIL & PASSWORD
-// ==========================================
+
+// MANAJEMEN PROFIL & PASSWORD
+
 async function muatProfilStaf() {
     try {
         const response = await fetch(`http://127.0.0.1:5000/api/profil/${idStafAktif}`);
@@ -296,7 +277,6 @@ if (formUbahPassword) {
         const passBaru = document.getElementById('pass-baru').value;
         const passKonfirm = document.getElementById('pass-konfirm').value;
 
-        // Validasi di sisi Klien (JavaScript)
         if (passBaru.length < 6) {
             return Swal.fire('Gagal!', 'Kata sandi baru minimal harus 6 karakter.', 'warning');
         }
@@ -307,7 +287,6 @@ if (formUbahPassword) {
             return Swal.fire('Peringatan!', 'Kata sandi baru tidak boleh sama dengan kata sandi lama.', 'warning');
         }
 
-        // Kirim ke sisi Server (Python)
         try {
             const response = await fetch('http://127.0.0.1:5000/api/ubah-password', {
                 method: 'POST',
@@ -323,7 +302,7 @@ if (formUbahPassword) {
 
             if (result.status === 'success') {
                 Swal.fire('Berhasil!', result.message, 'success');
-                formUbahPassword.reset(); // Kosongkan form
+                formUbahPassword.reset();
             } else {
                 Swal.fire('Akses Ditolak!', result.message, 'error');
             }
@@ -334,9 +313,9 @@ if (formUbahPassword) {
 }
 
 
-// ==========================================
-// 7. MODUL SLIP GAJI
-// ==========================================
+
+// MODUL SLIP GAJI
+
 
 // Fungsi singkat untuk format Rupiah
 const formatRupiah = (angka) => {
@@ -398,23 +377,23 @@ function cetakGaji(periode) {
 }
 
 
-// ==========================================
+
 // FUNGSI PENGAJUAN IZIN / SAKIT (DIPISAH)
-// ==========================================
+
 async function laporAbsen(tipe) {
-    // 1. Sesuaikan pesan dan warna berdasarkan tipe yang diklik
+    // 1. sesuaikan pesan dan warna berdasarkan tipe yang diklik
     let pesanTeks = '';
     let warnaTombol = '';
     
     if (tipe === 'Sakit') {
         pesanTeks = 'Apakah Anda yakin ingin melapor Sakit hari ini? Bukti surat keterangan dokter wajib diserahkan ke HRD saat Anda kembali bekerja.';
-        warnaTombol = '#ffc107'; // Kuning
+        warnaTombol = '#ffc107';
     } else {
         pesanTeks = 'Apakah Anda yakin ingin mengajukan Izin/Cuti hari ini? Pastikan Anda sudah berkoordinasi dengan atasan divisi Anda.';
-        warnaTombol = '#0dcaf0'; // Biru Info
+        warnaTombol = '#0dcaf0';
     }
 
-    // 2. Munculkan Pop-up Konfirmasi Langsung
+    // 2. munculkan pop-up konfirmasi langsung
     const result = await Swal.fire({
         title: `Konfirmasi Lapor ${tipe}`,
         text: pesanTeks,
@@ -426,7 +405,7 @@ async function laporAbsen(tipe) {
         cancelButtonText: 'Batal'
     });
 
-    // 3. Jika user menekan "Ya"
+    // 3. jika user menekan "Ya"
     if (result.isConfirmed) {
         try {
             const response = await fetch('http://127.0.0.1:5000/api/izin', {
@@ -434,7 +413,7 @@ async function laporAbsen(tipe) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     id_staf: idStafAktif, 
-                    status: tipe // Mengirim string 'Sakit' atau 'Izin' ke Python
+                    status: tipe
                 })
             });
             
@@ -443,13 +422,12 @@ async function laporAbsen(tipe) {
             if (data.status === 'success') {
                 Swal.fire('Laporan Terkirim!', data.message, 'success');
                 
-                // Kunci semua tombol agar tidak bisa diabsen ganda
                 document.getElementById('btn-masuk').disabled = true;
                 document.getElementById('btn-pulang').disabled = true;
                 document.getElementById('btn-sakit').disabled = true;
                 document.getElementById('btn-izin').disabled = true;
                 
-                // Perbarui tabel Riwayat Presensi
+                // perbarui tabel Riwayat Presensi
                 muatRiwayatPresensi();
             } else {
                 Swal.fire('Gagal!', data.message, 'error');
